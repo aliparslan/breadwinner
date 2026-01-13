@@ -5,15 +5,21 @@
     <title>breadwinner</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        body { font-family: sans-serif; max-width: 400px; margin: 2rem auto; padding: 1rem; }
+        body { font-family: sans-serif; max-width: 600px; margin: 2rem auto; padding: 1rem; }
         input, button { width: 100%; padding: 10px; margin: 5px 0; }
         .hidden { display: none; }
+        
+        /* Table Styles */
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f4f4f4; }
+        .amount { text-align: right; }
     </style>
 </head>
 <body>
 
     <div id="auth-section">
-        <h1>Welcome</h1>
+        <h1>Welcome to Breadwinner</h1>
         <input type="email" id="email" placeholder="Email">
         <input type="password" id="password" placeholder="Password">
         <button id="login-btn">Log In</button>
@@ -22,61 +28,129 @@
     </div>
 
     <div id="app-section" class="hidden">
-        <h1>Your Dashboard</h1>
+        <h1>Dashboard</h1>
         <p>Logged in as: <span id="user-email"></span></p>
-        <button id="logout-btn">Log Out</button>
+        <button id="logout-btn" style="background: #eee;">Log Out</button>
         <hr>
-        <p>Ready for file upload (Coming in Checkpoint 4)</p>
+
+        <h3>Upload Statement (PDF)</h3>
+        <input type="file" id="file-input" accept=".pdf">
+        <button id="upload-btn" style="background-color: #0070f3; color: white; font-weight: bold;">
+            Analyze with AI
+        </button>
+        <p id="status"></p>
+
+        <div id="results-area" class="hidden">
+            <h3>Transactions Found:</h3>
+            <table id="tx-table">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Description</th>
+                        <th>Category</th>
+                        <th>Amount</th>
+                    </tr>
+                </thead>
+                <tbody id="tx-body"></tbody>
+            </table>
+        </div>
     </div>
 
     <script>
-    // --- CONFIGURATION ---
-    const SUPABASE_URL = 'https://ahvfdteobwmrqkiorhpv.supabase.co';
-    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFodmZkdGVvYndtcnFraW9yaHB2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjgyNzI5NzMsImV4cCI6MjA4Mzg0ODk3M30.2K314udaXPAKiWalxXLNmZHqvv9YQ7iQnUtYyONTPrI'; 
-    
-    const client = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        // --- CONFIGURATION ---
+        const SUPABASE_URL = 'https://ahvfdteobwmrqkiorhpv.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFodmZkdGVvYndtcnFraW9yaHB2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjgyNzI5NzMsImV4cCI6MjA4Mzg0ODk3M30.2K314udaXPAKiWalxXLNmZHqvv9YQ7iQnUtYyONTPrI'; 
+        
+        const client = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    // --- AUTH LOGIC ---
-    
-    async function checkUser() {
-        const { data: { session } } = await client.auth.getSession();
-        updateUI(session);
-    }
+        // --- UPLOAD LOGIC (THE NEW PART) ---
+        document.getElementById('upload-btn').onclick = async () => {
+            const fileInput = document.getElementById('file-input');
+            const file = fileInput.files[0];
+            const status = document.getElementById('status');
 
-    document.getElementById('login-btn').onclick = async () => {
-        const email = document.getElementById('email').value;
-        const password = document.getElementById('password').value;
-        const { error } = await client.auth.signInWithPassword({ email, password });
-        if (error) alert(error.message);
-        else checkUser();
-    };
+            if (!file) {
+                alert("Please select a PDF first!");
+                return;
+            }
 
-    document.getElementById('signup-btn').onclick = async () => {
-        const email = document.getElementById('email').value;
-        const password = document.getElementById('password').value;
-        const { error } = await client.auth.signUp({ email, password });
-        if (error) alert(error.message);
-        else alert("Account created! Check your email (or log in if auto-confirm is on).");
-    };
+            status.innerText = "Uploading to AI... (This takes ~5-10 seconds)";
+            
+            const formData = new FormData();
+            formData.append('file', file);
 
-    document.getElementById('logout-btn').onclick = async () => {
-        await client.auth.signOut();
-        updateUI(null);
-    };
+            try {
+                // Send to our Cloudflare Backend
+                const response = await fetch('/api/upload', {
+                    method: 'POST',
+                    body: formData
+                });
 
-    function updateUI(session) {
-        if (session) {
-            document.getElementById('auth-section').classList.add('hidden');
-            document.getElementById('app-section').classList.remove('hidden');
-            document.getElementById('user-email').innerText = session.user.email;
-        } else {
-            document.getElementById('auth-section').classList.remove('hidden');
-            document.getElementById('app-section').classList.add('hidden');
+                if (!response.ok) throw new Error(await response.text());
+
+                const data = await response.json();
+                renderTable(data);
+                status.innerText = "Done!";
+            } catch (error) {
+                status.innerText = "Error: " + error.message;
+            }
+        };
+
+        function renderTable(transactions) {
+            const tbody = document.getElementById('tx-body');
+            tbody.innerHTML = ''; // Clear old data
+            
+            transactions.forEach(tx => {
+                const row = `<tr>
+                    <td>${tx.date}</td>
+                    <td>${tx.description}</td>
+                    <td>${tx.category}</td>
+                    <td class="amount">$${tx.amount}</td>
+                </tr>`;
+                tbody.innerHTML += row;
+            });
+            document.getElementById('results-area').classList.remove('hidden');
         }
-    }
 
-    checkUser();
+        // --- AUTH LOGIC (SAME AS BEFORE) ---
+        async function checkUser() {
+            const { data: { session } } = await client.auth.getSession();
+            updateUI(session);
+        }
+
+        document.getElementById('login-btn').onclick = async () => {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const { error } = await client.auth.signInWithPassword({ email, password });
+            if (error) alert(error.message);
+            else checkUser();
+        };
+
+        document.getElementById('signup-btn').onclick = async () => {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const { error } = await client.auth.signUp({ email, password });
+            if (error) alert(error.message);
+            else alert("Account created!");
+        };
+
+        document.getElementById('logout-btn').onclick = async () => {
+            await client.auth.signOut();
+            updateUI(null);
+        };
+
+        function updateUI(session) {
+            if (session) {
+                document.getElementById('auth-section').classList.add('hidden');
+                document.getElementById('app-section').classList.remove('hidden');
+                document.getElementById('user-email').innerText = session.user.email;
+            } else {
+                document.getElementById('auth-section').classList.remove('hidden');
+                document.getElementById('app-section').classList.add('hidden');
+            }
+        }
+
+        checkUser();
     </script>
-
- </body>
+</body>
 </html>
