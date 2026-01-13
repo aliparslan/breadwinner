@@ -2,68 +2,173 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>breadwinner</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"> <title>Breadwinner</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        body { font-family: sans-serif; max-width: 600px; margin: 2rem auto; padding: 1rem; }
-        input, button { width: 100%; padding: 10px; margin: 5px 0; }
+        /* --- 1. Base Styles (Desktop) --- */
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f9fafb;
+            color: #111;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+        }
+
+        #app-container {
+            width: 100%;
+            max-width: 800px; /* Keeps it readable on big screens */
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 { margin-top: 0; font-size: 1.8rem; }
+        input, button { 
+            width: 100%; 
+            padding: 12px; 
+            margin: 8px 0; 
+            border-radius: 6px; 
+            border: 1px solid #ccc;
+            font-size: 16px; /* Prevents auto-zoom on iPhone */
+            box-sizing: border-box;
+        }
+
+        button {
+            background-color: #0070f3;
+            color: white;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        button:hover { background-color: #0051a2; }
+        button.secondary { background-color: #eaeaea; color: #333; }
+
         .hidden { display: none; }
-        
-        /* Table Styles */
+        .loader {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #0070f3;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            vertical-align: middle;
+            margin-left: 10px;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* --- 2. Table Styles (Desktop) --- */
         table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-        th { background-color: #f4f4f4; }
-        .amount { text-align: right; }
+        th, td { 
+            padding: 12px; 
+            text-align: left; 
+            border-bottom: 1px solid #eaeaea; 
+        }
+        th { background-color: #f4f4f4; font-weight: 600; color: #555; }
+        .amount { text-align: right; font-family: monospace; font-weight: bold; }
+
+        /* --- 3. Mobile Magic (The "Card View") --- */
+        @media screen and (max-width: 600px) {
+            /* Hide the table header row completely */
+            thead { display: none; }
+
+            /* Turn rows into cards */
+            tr {
+                display: block;
+                margin-bottom: 15px;
+                border: 1px solid #ddd;
+                border-radius: 8px;
+                background: white;
+                box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            }
+
+            /* Turn cells into rows inside the card */
+            td {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                border-bottom: 1px solid #eee;
+                font-size: 14px;
+                padding: 10px 15px;
+                text-align: right;
+            }
+
+            td:last-child { border-bottom: none; }
+
+            /* Inject the column name (e.g., "Date") before the value */
+            td::before {
+                content: attr(data-label);
+                font-weight: 600;
+                color: #666;
+                text-transform: uppercase;
+                font-size: 12px;
+                text-align: left;
+            }
+
+            /* Special styling for specific columns */
+            td.amount { color: #0070f3; font-size: 16px; }
+        }
     </style>
 </head>
 <body>
 
-    <div id="auth-section">
-        <h1>Welcome to Breadwinner</h1>
-        <input type="email" id="email" placeholder="Email">
-        <input type="password" id="password" placeholder="Password">
-        <button id="login-btn">Log In</button>
-        <button id="signup-btn">Sign Up</button>
-        <p id="msg"></p>
-    </div>
+    <div id="app-container">
+        
+        <div id="auth-section">
+            <h1>Breadwinner 🍞</h1>
+            <p style="color:#666; margin-bottom: 20px;">Sign in to track your spending.</p>
+            <input type="email" id="email" placeholder="Email">
+            <input type="password" id="password" placeholder="Password">
+            <button id="login-btn">Log In</button>
+            <button id="signup-btn" class="secondary">Sign Up</button>
+            <p id="msg" style="color: red; font-size: 0.9rem; margin-top: 10px;"></p>
+        </div>
 
-    <div id="app-section" class="hidden">
-        <h1>Dashboard</h1>
-        <p>Logged in as: <span id="user-email"></span></p>
-        <button id="logout-btn" style="background: #eee;">Log Out</button>
-        <hr>
+        <div id="app-section" class="hidden">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                <h2 style="margin:0;">Dashboard</h2>
+                <button id="logout-btn" class="secondary" style="width:auto; padding: 8px 16px;">Log Out</button>
+            </div>
+            
+            <p style="color:#666; font-size: 0.9rem;">Logged in as: <span id="user-email"></span></p>
+            <hr style="border:0; border-top:1px solid #eee; margin: 20px 0;">
 
-        <h3>Upload Statement (PDF)</h3>
-        <input type="file" id="file-input" accept=".pdf">
-        <button id="upload-btn" style="background-color: #0070f3; color: white; font-weight: bold;">
-            Analyze with AI
-        </button>
-        <p id="status"></p>
+            <h3>Upload Statement</h3>
+            <div style="background:#f4f4f4; padding:15px; border-radius:8px; text-align:center;">
+                <input type="file" id="file-input" accept=".pdf" style="border:none; background:transparent;">
+                <button id="upload-btn" style="margin-top:10px;">Analyze with AI</button>
+            </div>
+            <p id="status" style="text-align:center; margin-top:10px; color:#666;"></p>
 
-        <div id="results-area" class="hidden">
-            <h3>Transactions Found:</h3>
-            <table id="tx-table">
-                <thead>
-                    <tr>
-                        <th>Date</th>
-                        <th>Description</th>
-                        <th>Category</th>
-                        <th>Amount</th>
-                    </tr>
-                </thead>
-                <tbody id="tx-body"></tbody>
-            </table>
+            <div id="results-area" class="hidden">
+                <h3 style="margin-top: 30px;">Transactions</h3>
+                <table id="tx-table">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Description</th>
+                            <th>Category</th>
+                            <th>Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tx-body"></tbody>
+                </table>
+            </div>
         </div>
     </div>
 
     <script>
         // --- CONFIGURATION ---
         const SUPABASE_URL = 'https://ahvfdteobwmrqkiorhpv.supabase.co';
-        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFodmZkdGVvYndtcnFraW9yaHB2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjgyNzI5NzMsImV4cCI6MjA4Mzg0ODk3M30.2K314udaXPAKiWalxXLNmZHqvv9YQ7iQnUtYyONTPrI'; 
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFodmZkdGVvYndtcnFraW9yaHB2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjgyNzI5NzMsImV4cCI6MjA4Mzg0ODk3M30.2K314udaXPAKiWalxXLNmZHqvv9YQ7iQnUtYyONTPrI';
         
         const client = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        // --- UPLOAD LOGIC (THE NEW PART) ---
+        // --- UPLOAD LOGIC ---
         document.getElementById('upload-btn').onclick = async () => {
             const fileInput = document.getElementById('file-input');
             const file = fileInput.files[0];
@@ -74,13 +179,12 @@
                 return;
             }
 
-            status.innerText = "Uploading to AI... (This takes ~5-10 seconds)";
+            status.innerHTML = 'Analyzing... <div class="loader"></div>';
             
             const formData = new FormData();
             formData.append('file', file);
 
             try {
-                // Send to our Cloudflare Backend
                 const response = await fetch('/api/upload', {
                     method: 'POST',
                     body: formData
@@ -90,7 +194,7 @@
 
                 const data = await response.json();
                 renderTable(data);
-                status.innerText = "Done!";
+                status.innerText = "✅ Done!";
             } catch (error) {
                 status.innerText = "Error: " + error.message;
             }
@@ -98,21 +202,22 @@
 
         function renderTable(transactions) {
             const tbody = document.getElementById('tx-body');
-            tbody.innerHTML = ''; // Clear old data
+            tbody.innerHTML = ''; 
             
             transactions.forEach(tx => {
+                // We add 'data-label' so CSS can display it on mobile
                 const row = `<tr>
-                    <td>${tx.date}</td>
-                    <td>${tx.description}</td>
-                    <td>${tx.category}</td>
-                    <td class="amount">$${tx.amount}</td>
+                    <td data-label="Date">${tx.date}</td>
+                    <td data-label="Description">${tx.description}</td>
+                    <td data-label="Category">${tx.category}</td>
+                    <td data-label="Amount" class="amount">$${tx.amount}</td>
                 </tr>`;
                 tbody.innerHTML += row;
             });
             document.getElementById('results-area').classList.remove('hidden');
         }
 
-        // --- AUTH LOGIC (SAME AS BEFORE) ---
+        // --- AUTH LOGIC ---
         async function checkUser() {
             const { data: { session } } = await client.auth.getSession();
             updateUI(session);
@@ -122,7 +227,7 @@
             const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
             const { error } = await client.auth.signInWithPassword({ email, password });
-            if (error) alert(error.message);
+            if (error) document.getElementById('msg').innerText = error.message;
             else checkUser();
         };
 
@@ -130,7 +235,7 @@
             const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
             const { error } = await client.auth.signUp({ email, password });
-            if (error) alert(error.message);
+            if (error) document.getElementById('msg').innerText = error.message;
             else alert("Account created!");
         };
 
@@ -147,6 +252,7 @@
             } else {
                 document.getElementById('auth-section').classList.remove('hidden');
                 document.getElementById('app-section').classList.add('hidden');
+                document.getElementById('msg').innerText = "";
             }
         }
 
