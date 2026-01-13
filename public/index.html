@@ -30,60 +30,53 @@
     </div>
 
     <script>
-        // --- CONFIGURATION ---
-        // Replace these with your actual keys from Supabase Settings -> API
-        const SUPABASE_URL = 'https://ahvfdteobwmrqkiorhpv.supabase.co';
-        const SUPABASE_KEY = 'sb_publishable_-jYvr8eCB678zR1aPvyWOQ_-e4iBsf';
-        
-        // Initialize Client
-        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    // --- CONFIGURATION ---
+    const SUPABASE_URL = 'https://ahvfdteobwmrqkiorhpv.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_-jYvr8eCB678zR1aPvyWOQ_-e4iBsf'; 
+    
+    const client = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        // --- AUTH LOGIC ---
-        
-        // 1. Check if user is already logged in
-        async function checkUser() {
-            const { data: { session } } = await supabase.auth.getSession();
-            updateUI(session);
+    // --- AUTH LOGIC ---
+    
+    async function checkUser() {
+        const { data: { session } } = await client.auth.getSession();
+        updateUI(session);
+    }
+
+    document.getElementById('login-btn').onclick = async () => {
+        const email = document.getElementById('email').value;
+        const password = document.getElementById('password').value;
+        const { error } = await client.auth.signInWithPassword({ email, password });
+        if (error) alert(error.message);
+        else checkUser();
+    };
+
+    document.getElementById('signup-btn').onclick = async () => {
+        const email = document.getElementById('email').value;
+        const password = document.getElementById('password').value;
+        const { error } = await client.auth.signUp({ email, password });
+        if (error) alert(error.message);
+        else alert("Account created! Check your email (or log in if auto-confirm is on).");
+    };
+
+    document.getElementById('logout-btn').onclick = async () => {
+        await client.auth.signOut();
+        updateUI(null);
+    };
+
+    function updateUI(session) {
+        if (session) {
+            document.getElementById('auth-section').classList.add('hidden');
+            document.getElementById('app-section').classList.remove('hidden');
+            document.getElementById('user-email').innerText = session.user.email;
+        } else {
+            document.getElementById('auth-section').classList.remove('hidden');
+            document.getElementById('app-section').classList.add('hidden');
         }
+    }
 
-        // 2. Handle Login
-        document.getElementById('login-btn').onclick = async () => {
-            const email = document.getElementById('email').value;
-            const password = document.getElementById('password').value;
-            const { error } = await supabase.auth.signInWithPassword({ email, password });
-            if (error) alert(error.message);
-            else checkUser();
-        };
-
-        // 3. Handle Signup
-        document.getElementById('signup-btn').onclick = async () => {
-            const email = document.getElementById('email').value;
-            const password = document.getElementById('password').value;
-            const { error } = await supabase.auth.signUp({ email, password });
-            if (error) alert(error.message);
-            else alert("Account created! You can now log in.");
-        };
-
-        // 4. Handle Logout
-        document.getElementById('logout-btn').onclick = async () => {
-            await supabase.auth.signOut();
-            updateUI(null);
-        };
-
-        // UI Switcher
-        function updateUI(session) {
-            if (session) {
-                document.getElementById('auth-section').classList.add('hidden');
-                document.getElementById('app-section').classList.remove('hidden');
-                document.getElementById('user-email').innerText = session.user.email;
-            } else {
-                document.getElementById('auth-section').classList.remove('hidden');
-                document.getElementById('app-section').classList.add('hidden');
-            }
-        }
-
-        // Run on load
-        checkUser();
+    checkUser();
     </script>
-</body>
+
+ </body>
 </html>
