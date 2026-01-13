@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Bank AI - Login</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body { font-family: sans-serif; max-width: 400px; margin: 2rem auto; padding: 1rem; }
+        input, button { width: 100%; padding: 10px; margin: 5px 0; }
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+
+    <div id="auth-section">
+        <h1>Welcome</h1>
+        <input type="email" id="email" placeholder="Email">
+        <input type="password" id="password" placeholder="Password">
+        <button id="login-btn">Log In</button>
+        <button id="signup-btn">Sign Up</button>
+        <p id="msg"></p>
+    </div>
+
+    <div id="app-section" class="hidden">
+        <h1>Your Dashboard</h1>
+        <p>Logged in as: <span id="user-email"></span></p>
+        <button id="logout-btn">Log Out</button>
+        <hr>
+        <p>Ready for file upload (Coming in Checkpoint 4)</p>
+    </div>
+
+    <script>
+        // --- CONFIGURATION ---
+        // Replace these with your actual keys from Supabase Settings -> API
+        const SUPABASE_URL = 'https://ahvfdteobwmrqkiorhpv.supabase.co';
+        const SUPABASE_KEY = 'sb_publishable_-jYvr8eCB678zR1aPvyWOQ_-e4iBsf';
+        
+        // Initialize Client
+        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        // --- AUTH LOGIC ---
+        
+        // 1. Check if user is already logged in
+        async function checkUser() {
+            const { data: { session } } = await supabase.auth.getSession();
+            updateUI(session);
+        }
+
+        // 2. Handle Login
+        document.getElementById('login-btn').onclick = async () => {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const { error } = await supabase.auth.signInWithPassword({ email, password });
+            if (error) alert(error.message);
+            else checkUser();
+        };
+
+        // 3. Handle Signup
+        document.getElementById('signup-btn').onclick = async () => {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const { error } = await supabase.auth.signUp({ email, password });
+            if (error) alert(error.message);
+            else alert("Account created! You can now log in.");
+        };
+
+        // 4. Handle Logout
+        document.getElementById('logout-btn').onclick = async () => {
+            await supabase.auth.signOut();
+            updateUI(null);
+        };
+
+        // UI Switcher
+        function updateUI(session) {
+            if (session) {
+                document.getElementById('auth-section').classList.add('hidden');
+                document.getElementById('app-section').classList.remove('hidden');
+                document.getElementById('user-email').innerText = session.user.email;
+            } else {
+                document.getElementById('auth-section').classList.remove('hidden');
+                document.getElementById('app-section').classList.add('hidden');
+            }
+        }
+
+        // Run on load
+        checkUser();
+    </script>
+</body>
+</html>

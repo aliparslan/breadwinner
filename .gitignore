@@ -1,0 +1,22 @@
+# Dependencies
+node_modules/
+npm-debug.log
+
+# Cloudflare & Wrangler (Local dev files)
+.wrangler/
+.dwrangler/
+
+# Environment Variables & Secrets (CRITICAL)
+.env
+.dev.vars
+.env.local
+
+# OS / Editor junk
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Build outputs (if you run a build command later)
+dist/
+build/
