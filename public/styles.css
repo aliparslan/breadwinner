@@ -2,14 +2,14 @@
 @import url("https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&display=swap");
 
 :root {
-  --bg-body: #111827; /* Dark Slate */
-  --bg-card: #1f2937; /* Slightly Lighter Slate */
-  --bg-input: #374151; /* Input Background */
-  --text-main: #f3f4f6; /* Off-white */
-  --text-muted: #9ca3af; /* Gray */
-  --accent-primary: #b9b2aa; /* Indigo */
-  --accent-green: #34d399; /* Neon Green */
-  --accent-red: #f87171; /* Soft Red */
+  --bg-body: #111827;
+  --bg-card: #1f2937;
+  --bg-input: #374151;
+  --text-main: #f3f4f6;
+  --text-muted: #9ca3af;
+  --accent-primary: #b9b2aa;
+  --accent-green: #34d399;
+  --accent-red: #f87171;
   --border: #374151;
 }
 
@@ -18,7 +18,7 @@ body {
   background-color: var(--bg-body);
   color: var(--text-main);
   margin: 0;
-  padding: 40px 20px; /* More outer padding */
+  padding: 20px 10px; /* Reduced outer padding for mobile */
   display: flex;
   justify-content: center;
   line-height: 1.5;
@@ -48,7 +48,7 @@ select {
   border: 1px solid var(--border);
   color: var(--text-main);
   font-family: inherit;
-  font-size: 0.9rem;
+  font-size: 16px; /* Prevents iOS zoom */
   border-radius: 4px;
   box-sizing: border-box;
 }
@@ -56,6 +56,13 @@ input:focus,
 select:focus {
   outline: none;
   border-color: var(--accent-primary);
+}
+
+/* FIX: Password dots look normal */
+input[type="password"] {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  letter-spacing: 1px;
+  font-size: 18px;
 }
 
 .input-group {
@@ -110,13 +117,16 @@ button.secondary:hover {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin: 60px 0 20px 0;
-  padding-bottom: 10px;
+  margin: 50px 0 20px 0;
+  padding-bottom: 15px;
   border-bottom: 1px solid var(--border);
+  flex-wrap: wrap; /* Allows stacking on mobile */
+  gap: 15px;
 }
 .header-actions {
   display: flex;
   gap: 10px;
+  width: auto;
 }
 .action-btn {
   width: auto;
@@ -136,7 +146,7 @@ button.secondary:hover {
 .card {
   background: var(--bg-card);
   border: 1px solid var(--border);
-  padding: 24px;
+  padding: 20px;
   border-radius: 6px;
   text-align: left;
 }
@@ -148,7 +158,7 @@ button.secondary:hover {
   letter-spacing: 1px;
 }
 .card p {
-  font-size: 1.6rem;
+  font-size: 1.4rem;
 }
 
 .positive {
@@ -175,6 +185,7 @@ button.secondary:hover {
   align-items: center;
   justify-content: center;
   margin-right: 15px;
+  flex-shrink: 0; /* Prevents squishing */
 }
 .cat-details {
   flex-grow: 1;
@@ -196,7 +207,7 @@ button.secondary:hover {
   border-radius: 2px;
 }
 
-/* --- Month Groups & Table (Refined) --- */
+/* --- Month Groups & Table --- */
 .month-group {
   margin-top: 40px;
 }
@@ -228,9 +239,8 @@ table {
   font-size: 0.9rem;
 }
 
-/* Wider rows, less cramped */
 td {
-  padding: 18px 10px; /* Increased padding */
+  padding: 18px 10px;
   border-bottom: 1px solid var(--border);
   color: var(--text-muted);
   vertical-align: middle;
@@ -238,14 +248,12 @@ td {
 tr:last-child td {
   border-bottom: none;
 }
-
-/* Hover effect on the whole row */
 tr:hover td {
   color: var(--text-main);
   background: rgba(255, 255, 255, 0.02);
 }
 
-/* --- Action Buttons (Terminal Style) --- */
+/* --- Action Buttons --- */
 .actions {
   display: flex;
   gap: 15px;
@@ -270,19 +278,11 @@ tr:hover .actions {
   width: auto;
   margin: 0;
 }
-
 .btn-edit {
   color: var(--accent-primary);
 }
-.btn-edit:hover {
-  background: rgba(129, 140, 248, 0.1);
-}
-
 .btn-del {
   color: var(--accent-red);
-}
-.btn-del:hover {
-  background: rgba(248, 113, 113, 0.1);
 }
 
 /* --- Modal --- */
@@ -302,7 +302,7 @@ tr:hover .actions {
 .modal {
   background: var(--bg-card);
   border: 1px solid var(--border);
-  padding: 2.5rem;
+  padding: 1.5rem; /* Reduced padding */
   border-radius: 6px;
   width: 90%;
   max-width: 420px;
@@ -339,25 +339,54 @@ tr:hover .actions {
   }
 }
 
-/* Mobile */
+/* --- MOBILE OPTIMIZATIONS --- */
 @media screen and (max-width: 600px) {
+  /* Stack Summary Cards */
+  .summary-cards {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  /* Stack Header Actions */
+  .section-header {
+    align-items: flex-start;
+  }
+  .header-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+  .header-actions button {
+    flex: 1;
+    justify-content: center;
+  }
+
+  /* Hide Table Headers */
   thead {
     display: none;
   }
+
+  /* Card View for Rows */
   tr {
     display: block;
     margin-bottom: 20px;
     border: 1px solid var(--border);
     padding: 15px;
     border-radius: 6px;
+    background: var(--bg-card);
   }
+
+  /* Flex cells inside Card */
   td {
     display: flex;
     justify-content: space-between;
+    align-items: center;
     border-bottom: 1px solid var(--bg-input);
-    padding: 12px 0;
+    padding: 10px 0;
+    text-align: right;
   }
-  .summary-cards {
-    grid-template-columns: 1fr;
+
+  /* Reveal Actions */
+  .actions {
+    opacity: 1;
   }
 }
