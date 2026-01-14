@@ -169,6 +169,7 @@
         const client = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         // --- UPLOAD LOGIC ---
+
         document.getElementById('upload-btn').onclick = async () => {
             const fileInput = document.getElementById('file-input');
             const file = fileInput.files[0];
@@ -179,7 +180,14 @@
                 return;
             }
 
-            status.innerHTML = 'Analyzing... <div class="loader"></div>';
+            // 1. Get the current user's token
+            const { data: { session } } = await client.auth.getSession();
+            if (!session) {
+                alert("Please log in first!");
+                return;
+            }
+
+            status.innerHTML = 'Analyzing & Saving... <div class="loader"></div>';
             
             const formData = new FormData();
             formData.append('file', file);
@@ -187,6 +195,10 @@
             try {
                 const response = await fetch('/api/upload', {
                     method: 'POST',
+                    // 2. Pass the token to the backend
+                    headers: {
+                        'Authorization': `Bearer ${session.access_token}`
+                    },
                     body: formData
                 });
 
@@ -194,12 +206,11 @@
 
                 const data = await response.json();
                 renderTable(data);
-                status.innerText = "✅ Done!";
+                status.innerText = "✅ Saved to Database!";
             } catch (error) {
                 status.innerText = "Error: " + error.message;
             }
         };
-
         function renderTable(transactions) {
             const tbody = document.getElementById('tx-body');
             tbody.innerHTML = ''; 
