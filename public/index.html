@@ -75,6 +75,28 @@
         </div>
     </div>
 
+    <div id="edit-modal" class="modal-overlay hidden">
+        <div class="modal">
+            <h2>Edit Transaction</h2>
+            <input type="hidden" id="edit-id">
+            
+            <label style="font-size: 12px; font-weight: bold; color: #666;">Description</label>
+            <input type="text" id="edit-desc">
+            
+            <label style="font-size: 12px; font-weight: bold; color: #666;">Amount (Negative = Spend)</label>
+            <input type="number" step="0.01" id="edit-amount">
+            
+            <label style="font-size: 12px; font-weight: bold; color: #666;">Category</label>
+            <select id="edit-category" style="width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 6px; margin: 8px 0;">
+                </select>
+
+            <div class="modal-actions">
+                <button class="secondary" onclick="closeModal()">Cancel</button>
+                <button onclick="saveEdit()">Save Changes</button>
+            </div>
+        </div>
+    </div>
+
     <script src="app.js"></script>
 </body>
 </html>
