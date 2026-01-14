@@ -2,7 +2,7 @@
 
 // --- CONFIGURATION ---
 const SUPABASE_URL = 'https://ahvfdteobwmrqkiorhpv.supabase.co';
-const SUPABASE_KEY = 'YOUR_EYJ_KEY_HERE'; // <--- PASTE KEY HERE
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFodmZkdGVvYndtcnFraW9yaHB2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjgyNzI5NzMsImV4cCI6MjA4Mzg0ODk3M30.2K314udaXPAKiWalxXLNmZHqvv9YQ7iQnUtYyONTPrI';
 
 const client = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
@@ -12,6 +12,36 @@ function formatCurrency(amount) {
     const isNeg = num < 0;
     const absVal = Math.abs(num).toFixed(2);
     return (isNeg ? '-$' : '$') + absVal;
+}
+
+// --- NEW: FETCH HISTORY (The Persistence Layer) ---
+async function fetchTransactions() {
+    const status = document.getElementById('status');
+    // 1. Ask Supabase for data AND the category name
+    // .order() makes sure the newest stuff is at the top
+    const { data, error } = await client
+        .from('transactions')
+        .select(`
+            *,
+            categories ( name )
+        `)
+        .order('date', { ascending: false });
+
+    if (error) {
+        console.error("Error fetching data:", error);
+        return;
+    }
+
+    // 2. Transformation (Flatten the data)
+    // Supabase returns: { amount: -10, categories: { name: 'Food' } }
+    // We need: { amount: -10, category: 'Food' }
+    const formattedData = data.map(tx => ({
+        ...tx,
+        category: tx.categories ? tx.categories.name : 'Miscellaneous'
+    }));
+
+    // 3. Render
+    renderDashboard(formattedData);
 }
 
 // --- UPLOAD LOGIC ---
@@ -44,8 +74,13 @@ if (uploadBtn) {
 
             if (!response.ok) throw new Error(await response.text());
 
-            const data = await response.json();
-            renderDashboard(data);
+            const newData = await response.json();
+            
+            // OPTIONAL: Instead of just rendering new data, we could re-fetch 
+            // everything to ensure the list is perfectly synced.
+            // For now, let's just re-fetch everything to keep it simple.
+            await fetchTransactions();
+            
             status.innerText = "✅ Done!";
         } catch (error) {
             status.innerText = "Error: " + error.message;
@@ -55,6 +90,11 @@ if (uploadBtn) {
 
 // --- RENDER LOGIC ---
 function renderDashboard(transactions) {
+    if (!transactions || transactions.length === 0) {
+        document.getElementById('results-area').classList.add('hidden');
+        return;
+    }
+
     let income = 0;
     let expense = 0;
     const catTotals = {};
@@ -123,6 +163,11 @@ function renderDashboard(transactions) {
 async function checkUser() {
     const { data: { session } } = await client.auth.getSession();
     updateUI(session);
+    
+    // NEW: If logged in, fetch data immediately!
+    if (session) {
+        fetchTransactions();
+    }
 }
 
 const loginBtn = document.getElementById('login-btn');
@@ -166,6 +211,8 @@ function updateUI(session) {
     } else {
         authSection.classList.remove('hidden');
         appSection.classList.add('hidden');
+        // Clear data on logout so it doesn't flash for the next user
+        document.getElementById('results-area').classList.add('hidden');
         const msg = document.getElementById('msg');
         if(msg) msg.innerText = "";
     }
