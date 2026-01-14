@@ -9,29 +9,29 @@
   </head>
   <body>
     <div id="app-container">
-      <div id="auth-section">
+      <div id="auth-section" class="auth-container">
         <h1>&gt; Breadwinner_</h1>
-        <p style="color: #9ca3af; margin-bottom: 30px">// Please authenticate to access system.</p>
+        <p class="subtitle">// Please authenticate to access system.</p>
 
-        <label style="font-size: 0.8rem; font-weight: bold; color: #666">USER_ID (EMAIL)</label>
+        <label class="input-label">USER_ID (EMAIL)</label>
         <input type="email" id="email" placeholder="user@capitalone.com" />
 
-        <label style="font-size: 0.8rem; font-weight: bold; color: #666">ACCESS_KEY (PASSWORD)</label>
+        <label class="input-label">ACCESS_KEY (PASSWORD)</label>
         <input type="password" id="password" placeholder="••••••••" />
 
-        <button id="login-btn" class="primary-btn">INITIALIZE SESSION</button>
-        <button id="signup-btn" class="secondary">CREATE NEW USER</button>
-        <p id="msg" style="color: #f87171; font-size: 0.9rem; margin-top: 10px"></p>
+        <div class="auth-buttons">
+          <button id="login-btn" class="primary-btn">INITIALIZE SESSION</button>
+          <button id="signup-btn" class="secondary">CREATE NEW USER</button>
+        </div>
+        <p id="msg" class="error-msg"></p>
       </div>
 
       <div id="app-section" class="hidden">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px">
-          <h1 style="font-size: 1.5rem">Dashboard</h1>
-          <div style="display: flex; align-items: center; gap: 15px">
-            <span id="user-email" style="color: #666; font-size: 0.8rem"></span>
-            <button id="logout-btn" class="secondary" style="width: auto; padding: 6px 12px; font-size: 0.8rem">
-              LOGOUT
-            </button>
+        <div class="dashboard-header">
+          <h1 class="dash-title">Dashboard</h1>
+          <div class="user-controls">
+            <span id="user-email"></span>
+            <button id="logout-btn" class="secondary logout-btn">LOGOUT</button>
           </div>
         </div>
 
@@ -50,21 +50,21 @@
           </div>
         </div>
 
-        <div class="section-header" style="margin-top: 50px; border: none; margin-bottom: 10px">
+        <div class="section-header">
           <h3>Highest Allocation</h3>
         </div>
         <div id="category-list"></div>
 
-        <div class="section-header">
+        <div class="section-header transactions-header">
           <h3>Transactions</h3>
           <div class="header-actions">
             <input type="file" id="file-input" accept=".pdf" style="display: none" />
-            <button id="trigger-upload-btn" class="secondary action-btn"><span>↑</span> Upload PDF</button>
-            <button onclick="openAddModal()" class="primary-btn action-btn"><span>+</span> Manual Entry</button>
+            <button id="trigger-upload-btn" class="secondary action-btn"><span>↑</span> PDF</button>
+            <button onclick="openAddModal()" class="primary-btn action-btn"><span>+</span> Add</button>
           </div>
         </div>
 
-        <p id="status" style="font-size: 0.9rem; color: #9ca3af; min-height: 20px"></p>
+        <p id="status" class="status-msg"></p>
 
         <div id="results-area">
           <div id="tx-table-container"></div>
@@ -74,22 +74,22 @@
 
     <div id="edit-modal" class="modal-overlay hidden">
       <div class="modal">
-        <h3 id="modal-title" style="margin-bottom: 20px">Edit Transaction</h3>
+        <h3 id="modal-title">Edit Transaction</h3>
         <input type="hidden" id="edit-id" />
 
-        <label style="font-size: 0.8rem; color: #9ca3af">DATE</label>
+        <label class="input-label">DATE</label>
         <input type="date" id="edit-date" />
 
-        <label style="font-size: 0.8rem; color: #9ca3af">DESCRIPTION</label>
+        <label class="input-label">DESCRIPTION</label>
         <input type="text" id="edit-desc" placeholder="e.g. AWS Invoice" />
 
-        <label style="font-size: 0.8rem; color: #9ca3af">AMOUNT (NEGATIVE = SPEND)</label>
+        <label class="input-label">AMOUNT (NEGATIVE = SPEND)</label>
         <div class="input-group">
           <span class="prefix">$</span>
           <input type="number" step="0.01" id="edit-amount" placeholder="-10.00" />
         </div>
 
-        <label style="font-size: 0.8rem; color: #9ca3af">CATEGORY</label>
+        <label class="input-label">CATEGORY</label>
         <select id="edit-category"></select>
 
         <div class="modal-actions">

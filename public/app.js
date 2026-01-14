@@ -18,17 +18,14 @@ function formatCurrency(amount) {
 }
 
 function formatDate(dateString) {
-  // Returns "Jan 12, 2026"
   return new Date(dateString).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
 // --- CORE FETCH LOGIC ---
 async function fetchTransactions() {
-  // 1. Categories
   const { data: cats } = await client.from("categories").select("*").order("name");
   allCategories = cats || [];
 
-  // 2. Transactions
   const { data, error } = await client
     .from("transactions")
     .select(`*, categories ( id, name )`)
@@ -50,7 +47,6 @@ async function fetchTransactions() {
 
 // --- RENDER LOGIC ---
 function renderDashboard(transactions) {
-  // 1. Totals
   let income = 0;
   let expense = 0;
   const catTotals = {};
@@ -66,20 +62,17 @@ function renderDashboard(transactions) {
     }
   });
 
-  // Update Cards
   document.getElementById("sum-income").innerText = formatCurrency(income);
   document.getElementById("sum-expense").innerText = formatCurrency(expense);
   const net = income + expense;
   document.getElementById("sum-net").innerText = formatCurrency(net);
   document.getElementById("sum-net").className = net >= 0 ? "positive" : "negative";
 
-  // 2. Categories
   const catContainer = document.getElementById("category-list");
   catContainer.innerHTML = "";
   const sortedCats = Object.entries(catTotals).sort((a, b) => b[1] - a[1]);
   const maxSpend = sortedCats.length > 0 ? sortedCats[0][1] : 1;
 
-  // Minimal Icons for Dark Mode
   const getIcon = (name) => {
     const lower = name.toLowerCase();
     if (lower.includes("food") || lower.includes("dining")) return "🍔";
@@ -99,14 +92,11 @@ function renderDashboard(transactions) {
                         <span style="color:#f3f4f6">${name}</span>
                         <span style="font-family:monospace">${formatCurrency(total * -1)}</span>
                     </div>
-                    <div class="cat-bar-bg">
-                        <div class="cat-bar-fill" style="width: ${percent}%;"></div>
-                    </div>
+                    <div class="cat-bar-bg"><div class="cat-bar-fill" style="width: ${percent}%;"></div></div>
                 </div>
             </div>`;
   });
 
-  // 3. Transactions Grouped by Month
   const container = document.getElementById("tx-table-container");
   container.innerHTML = "";
 
@@ -115,31 +105,24 @@ function renderDashboard(transactions) {
     const [y, m, d] = tx.date.split("-");
     const dateObj = new Date(y, m - 1, d);
     const monthKey = dateObj.toLocaleString("default", { month: "long", year: "numeric" }).toUpperCase();
-
     if (!grouped[monthKey]) grouped[monthKey] = [];
     grouped[monthKey].push(tx);
   });
 
   for (const [month, txs] of Object.entries(grouped)) {
     const monthTotal = txs.reduce((sum, t) => sum + parseFloat(t.amount), 0);
-
     const groupHtml = `
             <div class="month-group">
                 <div class="month-header" onclick="toggleMonth(this)">
                     <span>${month} <span style="font-size:0.8rem; opacity:0.5; margin-left:8px;">[${
       txs.length
     }]</span></span>
-                    <span class="${monthTotal >= 0 ? "positive" : "negative"}">
-                        ${formatCurrency(monthTotal)}
-                    </span>
+                    <span class="${monthTotal >= 0 ? "positive" : "negative"}">${formatCurrency(monthTotal)}</span>
                 </div>
                 <div class="month-content">
-                    <table>
-                        <tbody>${txs.map(renderRow).join("")}</tbody>
-                    </table>
+                    <table><tbody>${txs.map(renderRow).join("")}</tbody></table>
                 </div>
-            </div>
-        `;
+            </div>`;
     container.innerHTML += groupHtml;
   }
 }
@@ -147,32 +130,25 @@ function renderDashboard(transactions) {
 function renderRow(tx) {
   const colorClass = tx.amount < 0 ? "negative" : "positive";
   const desc = tx.description.length > 35 ? tx.description.substring(0, 32) + "..." : tx.description;
-
   return `
         <tr>
             <td style="width:15%; font-size:0.85rem;">${formatDate(tx.date)}</td>
-            
             <td style="width:30%; color: #f3f4f6; font-weight:600;">${desc}</td>
-            
             <td style="width:20%">
-                <span style="border:1px solid #374151; color:#9ca3af; padding:4px 8px; border-radius:4px; font-size:0.75rem; text-transform:uppercase;">
-                    ${tx.categoryName}
-                </span>
+                <span style="border:1px solid #374151; color:#9ca3af; padding:4px 8px; border-radius:4px; font-size:0.75rem; text-transform:uppercase;">${
+                  tx.categoryName
+                }</span>
             </td>
-            
             <td class="amount ${colorClass}" style="width:15%; text-align:right;">${formatCurrency(tx.amount)}</td>
-            
             <td style="width:20%; text-align:right;">
                 <div class="actions">
                     <button class="btn-action btn-edit" onclick="openEdit(${tx.id})">[EDIT]</button>
                     <button class="btn-action btn-del" onclick="deleteTx(${tx.id})">[DEL]</button>
                 </div>
             </td>
-        </tr>
-    `;
+        </tr>`;
 }
 
-// --- UI INTERACTIONS ---
 function toggleMonth(header) {
   header.nextElementSibling.classList.toggle("collapsed");
 }
@@ -184,9 +160,7 @@ async function deleteTx(id) {
   else fetchTransactions();
 }
 
-// --- MODAL LOGIC (ADD / EDIT) ---
 let currentEditId = null;
-
 function openAddModal() {
   currentEditId = null;
   document.getElementById("modal-title").innerText = "NEW TRANSACTION";
@@ -265,10 +239,8 @@ async function saveEdit() {
   }
 }
 
-// --- INIT ---
 const triggerBtn = document.getElementById("trigger-upload-btn");
 const fileInput = document.getElementById("file-input");
-
 if (triggerBtn && fileInput) {
   triggerBtn.onclick = () => fileInput.click();
   fileInput.onchange = async () => {
@@ -278,11 +250,9 @@ if (triggerBtn && fileInput) {
     const {
       data: { session },
     } = await client.auth.getSession();
-
     status.innerHTML = 'PROCESSING... <div class="loader"></div>';
     const formData = new FormData();
     formData.append("file", file);
-
     try {
       const response = await fetch("/api/upload", {
         method: "POST",
@@ -299,7 +269,6 @@ if (triggerBtn && fileInput) {
   };
 }
 
-// Login Enter Key
 document.getElementById("email")?.addEventListener("keypress", (e) => {
   if (e.key === "Enter") document.getElementById("login-btn").click();
 });
@@ -307,7 +276,6 @@ document.getElementById("password")?.addEventListener("keypress", (e) => {
   if (e.key === "Enter") document.getElementById("login-btn").click();
 });
 
-// Auth
 const loginBtn = document.getElementById("login-btn");
 if (loginBtn)
   loginBtn.onclick = async () => {
@@ -318,18 +286,6 @@ if (loginBtn)
     if (error) document.getElementById("msg").innerText = error.message;
     else checkUser();
   };
-
-const signupBtn = document.getElementById("signup-btn");
-if (signupBtn) {
-  signupBtn.onclick = async () => {
-    const email = document.getElementById("email").value;
-    const password = document.getElementById("password").value;
-    const { error } = await client.auth.signUp({ email, password });
-    if (error) document.getElementById("msg").innerText = error.message;
-    else alert("Account created!");
-  };
-}
-
 document.getElementById("logout-btn").onclick = async () => {
   await client.auth.signOut();
   updateUI(null);
@@ -342,7 +298,6 @@ async function checkUser() {
   updateUI(session);
   if (session) fetchTransactions();
 }
-
 function updateUI(session) {
   if (session) {
     document.getElementById("auth-section").classList.add("hidden");
@@ -353,5 +308,4 @@ function updateUI(session) {
     document.getElementById("app-section").classList.add("hidden");
   }
 }
-
 checkUser();

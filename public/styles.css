@@ -7,7 +7,7 @@
   --bg-input: #374151;
   --text-main: #f3f4f6;
   --text-muted: #9ca3af;
-  --accent-primary: #b9b2aa;
+  --accent-primary: #818cf8;
   --accent-green: #34d399;
   --accent-red: #f87171;
   --border: #374151;
@@ -18,15 +18,17 @@ body {
   background-color: var(--bg-body);
   color: var(--text-main);
   margin: 0;
-  padding: 20px 10px; /* Reduced outer padding for mobile */
+  padding: 0;
   display: flex;
   justify-content: center;
   line-height: 1.5;
+  min-height: 100vh;
 }
 
 #app-container {
   width: 100%;
   max-width: 900px;
+  padding: 40px 20px;
 }
 
 h1,
@@ -38,17 +40,56 @@ h4 {
   letter-spacing: -0.5px;
 }
 
-/* --- Inputs & Forms --- */
+/* --- Auth Section --- */
+.auth-container {
+  max-width: 400px;
+  margin: 10vh auto 0;
+  padding: 2rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.auth-buttons button {
+  width: 100%;
+}
+
+/* --- Inputs --- */
+.input-label {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-weight: bold;
+  margin-bottom: 4px;
+  display: block;
+  margin-top: 15px;
+}
+.subtitle {
+  color: var(--text-muted);
+  margin-bottom: 30px;
+  font-size: 0.9rem;
+}
+.error-msg {
+  color: var(--accent-red);
+  font-size: 0.9rem;
+  margin-top: 10px;
+}
+.status-msg {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  min-height: 20px;
+  text-align: center;
+  margin-top: 10px;
+}
+
 input,
 select {
   width: 100%;
-  padding: 14px;
-  margin: 8px 0;
+  padding: 12px;
+  margin: 4px 0 8px 0;
   background: var(--bg-input);
   border: 1px solid var(--border);
   color: var(--text-main);
   font-family: inherit;
-  font-size: 16px; /* Prevents iOS zoom */
+  font-size: 14px;
   border-radius: 4px;
   box-sizing: border-box;
 }
@@ -57,12 +98,9 @@ select:focus {
   outline: none;
   border-color: var(--accent-primary);
 }
-
-/* FIX: Password dots look normal */
 input[type="password"] {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  letter-spacing: 1px;
-  font-size: 18px;
+  font-family: sans-serif;
+  letter-spacing: 2px;
 }
 
 .input-group {
@@ -71,9 +109,8 @@ input[type="password"] {
 }
 .input-group .prefix {
   position: absolute;
-  left: 14px;
-  top: 50%;
-  transform: translateY(-50%);
+  left: 12px;
+  top: 16px;
   color: var(--text-muted);
 }
 .input-group input {
@@ -82,26 +119,24 @@ input[type="password"] {
 
 /* --- Buttons --- */
 button {
-  width: 100%;
-  padding: 14px;
+  padding: 10px 20px;
   margin: 8px 0;
   font-family: inherit;
   font-weight: 700;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   cursor: pointer;
   border-radius: 4px;
   border: 1px solid transparent;
   transition: all 0.2s;
+  width: auto;
 }
-
 button.primary-btn {
   background-color: var(--accent-primary);
   color: #111;
 }
 button.primary-btn:hover {
-  background-color: #8d8379;
+  background-color: #a5b4fc;
 }
-
 button.secondary {
   background-color: transparent;
   border: 1px solid var(--border);
@@ -112,55 +147,54 @@ button.secondary:hover {
   color: var(--text-main);
 }
 
-/* --- Action Header (Add / Upload) --- */
-.section-header {
+/* --- Header --- */
+.dashboard-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin: 50px 0 20px 0;
-  padding-bottom: 15px;
+  margin-bottom: 25px;
   border-bottom: 1px solid var(--border);
-  flex-wrap: wrap; /* Allows stacking on mobile */
+  padding-bottom: 15px;
+}
+.user-controls {
+  display: flex;
+  align-items: center;
   gap: 15px;
 }
-.header-actions {
-  display: flex;
-  gap: 10px;
-  width: auto;
+#user-email {
+  color: #666;
+  font-size: 0.8rem;
 }
-.action-btn {
-  width: auto;
+.logout-btn {
   margin: 0;
-  display: flex;
-  gap: 8px;
-  align-items: center;
+}
+.dash-title {
+  font-size: 1.5rem;
 }
 
 /* --- Summary Cards --- */
 .summary-cards {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 20px;
-  margin-top: 30px;
+  gap: 15px;
+  margin-top: 10px;
 }
 .card {
   background: var(--bg-card);
   border: 1px solid var(--border);
   padding: 20px;
-  border-radius: 6px;
-  text-align: left;
+  border-radius: 4px;
 }
 .card h4 {
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   text-transform: uppercase;
   color: var(--text-muted);
-  margin-bottom: 10px;
+  margin-bottom: 5px;
   letter-spacing: 1px;
 }
 .card p {
   font-size: 1.4rem;
 }
-
 .positive {
   color: var(--accent-green);
 }
@@ -168,24 +202,44 @@ button.secondary:hover {
   color: var(--accent-red);
 }
 
-/* --- Top Spending List --- */
+/* --- Lists --- */
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 40px 0 15px 0;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+}
+.header-actions {
+  display: flex;
+  gap: 10px;
+}
+.action-btn {
+  margin: 0;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+/* Top Spending */
 .cat-item {
   display: flex;
   align-items: center;
-  margin-bottom: 16px;
+  margin-bottom: 12px;
   font-size: 0.9rem;
 }
 .cat-icon {
-  width: 36px;
-  height: 36px;
+  width: 32px;
+  height: 32px;
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: 4px;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-right: 15px;
-  flex-shrink: 0; /* Prevents squishing */
+  margin-right: 12px;
+  flex-shrink: 0;
 }
 .cat-details {
   flex-grow: 1;
@@ -193,7 +247,7 @@ button.secondary:hover {
 .cat-row {
   display: flex;
   justify-content: space-between;
-  margin-bottom: 6px;
+  margin-bottom: 4px;
 }
 .cat-bar-bg {
   background: var(--bg-input);
@@ -207,16 +261,15 @@ button.secondary:hover {
   border-radius: 2px;
 }
 
-/* --- Month Groups & Table --- */
+/* --- Table & Desktop View --- */
 .month-group {
-  margin-top: 40px;
+  margin-top: 30px;
 }
-
 .month-header {
-  padding: 12px 0;
+  padding: 10px 0;
   cursor: pointer;
   font-weight: 700;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   display: flex;
   justify-content: space-between;
   color: var(--text-muted);
@@ -233,38 +286,33 @@ button.secondary:hover {
 
 table {
   width: 100%;
-  border-collapse: separate;
-  border-spacing: 0;
-  margin-top: 15px;
-  font-size: 0.9rem;
+  border-collapse: collapse;
+  margin-top: 10px;
+  font-size: 0.85rem;
 }
-
 td {
-  padding: 18px 10px;
+  padding: 14px 10px;
   border-bottom: 1px solid var(--border);
   color: var(--text-muted);
   vertical-align: middle;
-}
-tr:last-child td {
-  border-bottom: none;
 }
 tr:hover td {
   color: var(--text-main);
   background: rgba(255, 255, 255, 0.02);
 }
+tr:last-child td {
+  border-bottom: none;
+}
 
-/* --- Action Buttons --- */
 .actions {
   display: flex;
-  gap: 15px;
+  gap: 10px;
   justify-content: flex-end;
-  opacity: 0.4;
-  transition: opacity 0.2s;
+  opacity: 0.5;
 }
 tr:hover .actions {
   opacity: 1;
 }
-
 .btn-action {
   background: none;
   border: none;
@@ -272,9 +320,7 @@ tr:hover .actions {
   font-size: 0.75rem;
   font-weight: 700;
   cursor: pointer;
-  padding: 4px 8px;
-  border-radius: 4px;
-  letter-spacing: 0.5px;
+  padding: 0;
   width: auto;
   margin: 0;
 }
@@ -302,20 +348,17 @@ tr:hover .actions {
 .modal {
   background: var(--bg-card);
   border: 1px solid var(--border);
-  padding: 1.5rem; /* Reduced padding */
-  border-radius: 6px;
+  padding: 25px;
+  border-radius: 4px;
   width: 90%;
-  max-width: 420px;
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+  max-width: 400px;
 }
 .modal-actions {
   display: flex;
   justify-content: flex-end;
   gap: 10px;
-  margin-top: 30px;
+  margin-top: 25px;
 }
-
-/* Helper */
 .hidden {
   display: none;
 }
@@ -339,17 +382,46 @@ tr:hover .actions {
   }
 }
 
-/* --- MOBILE OPTIMIZATIONS --- */
+/* --- MOBILE RESPONSIVENESS (Refined) --- */
 @media screen and (max-width: 600px) {
-  /* Stack Summary Cards */
+  #app-container {
+    padding: 20px 15px;
+  }
+
+  .auth-container {
+    margin: 0;
+    border: none;
+    background: transparent;
+    padding: 0;
+  }
+
+  .dashboard-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 15px;
+  }
+  .user-controls {
+    width: 100%;
+    justify-content: space-between;
+    background: var(--bg-card);
+    padding: 10px;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+    box-sizing: border-box;
+  }
+  .dash-title {
+    margin-bottom: 0;
+  }
+
   .summary-cards {
     grid-template-columns: 1fr;
     gap: 10px;
   }
 
-  /* Stack Header Actions */
   .section-header {
     align-items: flex-start;
+    flex-direction: column;
+    gap: 10px;
   }
   .header-actions {
     width: 100%;
@@ -360,33 +432,94 @@ tr:hover .actions {
     justify-content: center;
   }
 
-  /* Hide Table Headers */
+  /* The "Receipt" Card Layout */
   thead {
     display: none;
   }
-
-  /* Card View for Rows */
   tr {
-    display: block;
-    margin-bottom: 20px;
-    border: 1px solid var(--border);
-    padding: 15px;
-    border-radius: 6px;
+    display: grid;
+    grid-template-columns: 1fr auto; /* Left side vs Right side */
+    grid-template-areas:
+      "date amount"
+      "desc desc"
+      "cat actions";
+    gap: 8px 0; /* Cleaner vertical spacing */
+
     background: var(--bg-card);
+    border: 1px solid var(--border);
+    padding: 16px; /* Breathing room */
+    margin-bottom: 15px;
+    border-radius: 6px;
   }
 
-  /* Flex cells inside Card */
-  td {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    border-bottom: 1px solid var(--bg-input);
-    padding: 10px 0;
+  /* 1. Date (Top Left) - No squishing */
+  td:nth-child(1) {
+    grid-area: date;
+    border: none;
+    padding: 0;
+    font-size: 0.75rem;
+    align-self: start;
+    white-space: nowrap; /* Prevents "Dec \n 28" stacking */
+  }
+
+  /* 2. Description (Middle) */
+  td:nth-child(2) {
+    grid-area: desc;
+    border: none;
+    padding: 6px 0 10px 0;
+    font-size: 1rem;
+    color: #fff;
+    line-height: 1.4;
+    border-bottom: 1px dashed var(--border); /* Subtle divider */
+    margin-bottom: 6px;
+  }
+
+  /* 3. Category (Bottom Left) - THE FIX */
+  td:nth-child(3) {
+    grid-area: cat;
+    border: none;
+    padding: 0;
+    align-self: end;
+  }
+
+  /* Target the span inside for proper display */
+  td:nth-child(3) span {
+    display: inline-block;
+    white-space: nowrap; /* Force single line */
+    max-width: 150px; /* Truncate if insanely long */
+    overflow: hidden;
+    text-overflow: ellipsis;
+    vertical-align: bottom;
+  }
+
+  /* 4. Amount (Top Right) */
+  td:nth-child(4) {
+    grid-area: amount;
+    border: none;
+    padding: 0;
     text-align: right;
+    font-size: 1.1rem; /* Slightly bigger */
+    font-weight: bold;
+    align-self: start;
   }
 
-  /* Reveal Actions */
+  /* 5. Actions (Bottom Right) */
+  td:nth-child(5) {
+    grid-area: actions;
+    border: none;
+    padding: 0;
+    align-self: end;
+    justify-self: end;
+  }
+
   .actions {
     opacity: 1;
+    margin-top: 0;
+  }
+  .btn-action {
+    font-size: 0.75rem;
+    padding: 6px 10px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
   }
 }
