@@ -40,7 +40,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
     );
 
     const genAI = new GoogleGenerativeAI(env.GEMINI_API_KEY);
-    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" }); // Using the fast model
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" }); // Using the fast model
 
     // 6. The "Enforcer" Prompt
     const prompt = `
