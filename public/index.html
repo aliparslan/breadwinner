@@ -1,102 +1,104 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Breadwinner</title>
-    
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>BREADWINNER</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    
-    <link rel="stylesheet" href="styles.css">
-</head>
-<body>
-
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
     <div id="app-container">
-        
-        <div id="auth-section">
-            <h1>Breadwinner 🍞</h1>
-            <p style="color:#666; margin-bottom: 20px;">Sign in to track your spending.</p>
-            <input type="email" id="email" placeholder="Email">
-            <input type="password" id="password" placeholder="Password">
-            <button id="login-btn">Log In</button>
-            <button id="signup-btn" class="secondary">Sign Up</button>
-            <p id="msg" style="color: red; font-size: 0.9rem; margin-top: 10px;"></p>
+      <div id="auth-section">
+        <h1>&gt; Breadwinner_</h1>
+        <p style="color: #9ca3af; margin-bottom: 30px">// Please authenticate to access system.</p>
+
+        <label style="font-size: 0.8rem; font-weight: bold; color: #666">USER_ID (EMAIL)</label>
+        <input type="email" id="email" placeholder="user@capitalone.com" />
+
+        <label style="font-size: 0.8rem; font-weight: bold; color: #666">ACCESS_KEY (PASSWORD)</label>
+        <input type="password" id="password" placeholder="••••••••" />
+
+        <button id="login-btn" class="primary-btn">INITIALIZE SESSION</button>
+        <button id="signup-btn" class="secondary">CREATE NEW USER</button>
+        <p id="msg" style="color: #f87171; font-size: 0.9rem; margin-top: 10px"></p>
+      </div>
+
+      <div id="app-section" class="hidden">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px">
+          <h1 style="font-size: 1.5rem">Dashboard</h1>
+          <div style="display: flex; align-items: center; gap: 15px">
+            <span id="user-email" style="color: #666; font-size: 0.8rem"></span>
+            <button id="logout-btn" class="secondary" style="width: auto; padding: 6px 12px; font-size: 0.8rem">
+              LOGOUT
+            </button>
+          </div>
         </div>
 
-        <div id="app-section" class="hidden">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-                <h2 style="margin:0;">Dashboard</h2>
-                <button id="logout-btn" class="secondary" style="width:auto; padding: 8px 16px;">Log Out</button>
-            </div>
-            
-            <p style="color:#666; font-size: 0.9rem;">Logged in as: <span id="user-email"></span></p>
-            <hr style="border:0; border-top:1px solid #eee; margin: 20px 0;">
-
-            <h3>Upload Statement</h3>
-            <div style="background:#f4f4f4; padding:15px; border-radius:8px; text-align:center;">
-                <input type="file" id="file-input" accept=".pdf" style="border:none; background:transparent;">
-                <button id="upload-btn" style="margin-top:10px;">Analyze with AI</button>
-            </div>
-            <p id="status" style="text-align:center; margin-top:10px; color:#666;"></p>
-
-            <div id="results-area" class="hidden">
-                <h3 style="margin-top: 30px;">Summary</h3>
-                <div class="summary-cards">
-                    <div class="card">
-                        <h4>Income</h4>
-                        <p id="sum-income" class="positive">$0.00</p>
-                    </div>
-                    <div class="card">
-                        <h4>Expenses</h4>
-                        <p id="sum-expense" class="negative">$0.00</p>
-                    </div>
-                    <div class="card">
-                        <h4>Net</h4>
-                        <p id="sum-net">$0.00</p>
-                    </div>
-                </div>
-
-                <h3 style="margin-top: 30px;">Top Spending Categories</h3>
-                <div id="category-list" style="margin-bottom: 30px;"></div>
-
-                <h3>All Transactions</h3>
-                <table id="tx-table">
-                    <thead>
-                        <tr>
-                            <th>Date</th>
-                            <th>Description</th>
-                            <th>Category</th>
-                            <th>Amount</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tx-body"></tbody>
-                </table>
-            </div>
+        <div class="summary-cards">
+          <div class="card">
+            <h4>Total Income</h4>
+            <p id="sum-income" class="positive">$0.00</p>
+          </div>
+          <div class="card">
+            <h4>Total Expenses</h4>
+            <p id="sum-expense" class="negative">$0.00</p>
+          </div>
+          <div class="card">
+            <h4>Net Position</h4>
+            <p id="sum-net">$0.00</p>
+          </div>
         </div>
+
+        <div class="section-header" style="margin-top: 50px; border: none; margin-bottom: 10px">
+          <h3>Highest Allocation</h3>
+        </div>
+        <div id="category-list"></div>
+
+        <div class="section-header">
+          <h3>Transactions</h3>
+          <div class="header-actions">
+            <input type="file" id="file-input" accept=".pdf" style="display: none" />
+            <button id="trigger-upload-btn" class="secondary action-btn"><span>↑</span> Upload PDF</button>
+            <button onclick="openAddModal()" class="primary-btn action-btn"><span>+</span> Manual Entry</button>
+          </div>
+        </div>
+
+        <p id="status" style="font-size: 0.9rem; color: #9ca3af; min-height: 20px"></p>
+
+        <div id="results-area">
+          <div id="tx-table-container"></div>
+        </div>
+      </div>
     </div>
 
     <div id="edit-modal" class="modal-overlay hidden">
-        <div class="modal">
-            <h2>Edit Transaction</h2>
-            <input type="hidden" id="edit-id">
-            
-            <label style="font-size: 12px; font-weight: bold; color: #666;">Description</label>
-            <input type="text" id="edit-desc">
-            
-            <label style="font-size: 12px; font-weight: bold; color: #666;">Amount (Negative = Spend)</label>
-            <input type="number" step="0.01" id="edit-amount">
-            
-            <label style="font-size: 12px; font-weight: bold; color: #666;">Category</label>
-            <select id="edit-category" style="width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 6px; margin: 8px 0;">
-                </select>
+      <div class="modal">
+        <h3 id="modal-title" style="margin-bottom: 20px">Edit Transaction</h3>
+        <input type="hidden" id="edit-id" />
 
-            <div class="modal-actions">
-                <button class="secondary" onclick="closeModal()">Cancel</button>
-                <button onclick="saveEdit()">Save Changes</button>
-            </div>
+        <label style="font-size: 0.8rem; color: #9ca3af">DATE</label>
+        <input type="date" id="edit-date" />
+
+        <label style="font-size: 0.8rem; color: #9ca3af">DESCRIPTION</label>
+        <input type="text" id="edit-desc" placeholder="e.g. AWS Invoice" />
+
+        <label style="font-size: 0.8rem; color: #9ca3af">AMOUNT (NEGATIVE = SPEND)</label>
+        <div class="input-group">
+          <span class="prefix">$</span>
+          <input type="number" step="0.01" id="edit-amount" placeholder="-10.00" />
         </div>
+
+        <label style="font-size: 0.8rem; color: #9ca3af">CATEGORY</label>
+        <select id="edit-category"></select>
+
+        <div class="modal-actions">
+          <button class="secondary" onclick="closeModal()">CANCEL</button>
+          <button class="primary-btn" onclick="saveEdit()">SAVE RECORD</button>
+        </div>
+      </div>
     </div>
 
     <script src="app.js"></script>
-</body>
+  </body>
 </html>
