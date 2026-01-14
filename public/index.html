@@ -4,130 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Breadwinner</title>
+    
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <style>
-        /* --- 1. Base Styles --- */
-        body { 
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background-color: #f9fafb;
-            color: #111;
-            margin: 0;
-            padding: 20px;
-            display: flex;
-            justify-content: center;
-        }
-
-        #app-container {
-            width: 100%;
-            max-width: 800px;
-            background: white;
-            padding: 2rem;
-            border-radius: 12px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-        }
-
-        h1 { margin-top: 0; font-size: 1.8rem; }
-        h3 { margin-bottom: 10px; color: #333; }
-
-        input, button { 
-            width: 100%; 
-            padding: 12px; 
-            margin: 8px 0; 
-            border-radius: 6px; 
-            border: 1px solid #ccc;
-            font-size: 16px;
-            box-sizing: border-box;
-        }
-
-        button {
-            background-color: #0070f3;
-            color: white;
-            font-weight: 600;
-            border: none;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-        button:hover { background-color: #0051a2; }
-        button.secondary { background-color: #eaeaea; color: #333; }
-
-        .hidden { display: none; }
-        .loader {
-            border: 3px solid #f3f3f3;
-            border-top: 3px solid #0070f3;
-            border-radius: 50%;
-            width: 20px;
-            height: 20px;
-            animation: spin 1s linear infinite;
-            display: inline-block;
-            vertical-align: middle;
-            margin-left: 10px;
-        }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-
-        /* --- 2. Summary & Analysis Styles (NEW) --- */
-        .summary-cards {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 10px;
-            margin-top: 20px;
-        }
-        .card {
-            background: #f4f4f4;
-            padding: 15px;
-            border-radius: 8px;
-            text-align: center;
-        }
-        .card h4 { margin: 0 0 5px 0; font-size: 0.9rem; color: #666; }
-        .card p { margin: 0; font-size: 1.2rem; font-weight: bold; }
-        
-        .cat-row {
-            display: flex;
-            justify-content: space-between;
-            padding: 8px 0;
-            border-bottom: 1px solid #eee;
-        }
-        .cat-bar-bg { background: #eee; height: 6px; border-radius: 3px; overflow: hidden; margin-top: 4px; }
-        .cat-bar-fill { background: #0070f3; height: 100%; }
-
-        /* --- 3. Table Styles --- */
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #eaeaea; }
-        th { background-color: #f4f4f4; font-weight: 600; color: #555; }
-        .amount { text-align: right; font-family: monospace; font-weight: bold; }
-        .negative { color: #d32f2f; } /* Red for spending */
-        .positive { color: #0070f3; } /* Blue for income */
-
-        /* --- 4. Mobile Magic --- */
-        @media screen and (max-width: 600px) {
-            thead { display: none; }
-            tr {
-                display: block;
-                margin-bottom: 15px;
-                border: 1px solid #ddd;
-                border-radius: 8px;
-                background: white;
-                box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-            }
-            td {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                border-bottom: 1px solid #eee;
-                font-size: 14px;
-                padding: 10px 15px;
-                text-align: right;
-            }
-            td:last-child { border-bottom: none; }
-            td::before {
-                content: attr(data-label);
-                font-weight: 600;
-                color: #666;
-                text-transform: uppercase;
-                font-size: 12px;
-                text-align: left;
-            }
-        }
-    </style>
+    
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
@@ -160,7 +40,6 @@
             <p id="status" style="text-align:center; margin-top:10px; color:#666;"></p>
 
             <div id="results-area" class="hidden">
-                
                 <h3 style="margin-top: 30px;">Summary</h3>
                 <div class="summary-cards">
                     <div class="card">
@@ -178,8 +57,7 @@
                 </div>
 
                 <h3 style="margin-top: 30px;">Top Spending Categories</h3>
-                <div id="category-list" style="margin-bottom: 30px;">
-                    </div>
+                <div id="category-list" style="margin-bottom: 30px;"></div>
 
                 <h3>All Transactions</h3>
                 <table id="tx-table">
@@ -197,170 +75,6 @@
         </div>
     </div>
 
-    <script>
-        // --- CONFIGURATION ---
-        const SUPABASE_URL = 'https://ahvfdteobwmrqkiorhpv.supabase.co';
-        const SUPABASE_KEY = 'YOUR_EYJ_KEY_HERE'; // <--- PASTE KEY HERE ONE LAST TIME
-        
-        const client = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
-        // --- HELPER: Fix Currency Display ---
-        // Turns -4.50 into "-$4.50" and 4.50 into "+$4.50"
-        function formatCurrency(amount) {
-            const num = parseFloat(amount);
-            const isNeg = num < 0;
-            const absVal = Math.abs(num).toFixed(2);
-            return (isNeg ? '-$' : '$') + absVal;
-        }
-
-        // --- UPLOAD LOGIC ---
-        document.getElementById('upload-btn').onclick = async () => {
-            const fileInput = document.getElementById('file-input');
-            const file = fileInput.files[0];
-            const status = document.getElementById('status');
-
-            if (!file) {
-                alert("Please select a PDF first!");
-                return;
-            }
-
-            const { data: { session } } = await client.auth.getSession();
-            if (!session) { alert("Please log in first!"); return; }
-
-            status.innerHTML = 'Analyzing... <div class="loader"></div>';
-            
-            const formData = new FormData();
-            formData.append('file', file);
-
-            try {
-                const response = await fetch('/api/upload', {
-                    method: 'POST',
-                    headers: { 'Authorization': `Bearer ${session.access_token}` },
-                    body: formData
-                });
-
-                if (!response.ok) throw new Error(await response.text());
-
-                const data = await response.json();
-                renderDashboard(data); // New function to handle all rendering
-                status.innerText = "✅ Done!";
-            } catch (error) {
-                status.innerText = "Error: " + error.message;
-            }
-        };
-
-        // --- RENDER LOGIC (The New Brain) ---
-        function renderDashboard(transactions) {
-            // 1. Calculate Totals
-            let income = 0;
-            let expense = 0;
-            const catTotals = {}; // { "Food": 150.00, "Rent": 500.00 }
-
-            transactions.forEach(tx => {
-                const amt = parseFloat(tx.amount);
-                
-                // Summary Math
-                if (amt > 0) income += amt;
-                else {
-                    expense += amt; // expense is negative, so we add it directly
-                    
-                    // Category Math (Only track spending for breakdown)
-                    const catName = tx.category || "Miscellaneous";
-                    if (!catTotals[catName]) catTotals[catName] = 0;
-                    catTotals[catName] += Math.abs(amt);
-                }
-            });
-
-            const net = income + expense;
-
-            // 2. Update Summary Cards
-            document.getElementById('sum-income').innerText = formatCurrency(income);
-            document.getElementById('sum-expense').innerText = formatCurrency(expense);
-            document.getElementById('sum-net').innerText = formatCurrency(net);
-            document.getElementById('sum-net').className = net >= 0 ? 'positive' : 'negative';
-
-            // 3. Render Category Bars (Sorted Highest to Lowest)
-            const catContainer = document.getElementById('category-list');
-            catContainer.innerHTML = '';
-            
-            const sortedCats = Object.entries(catTotals).sort((a, b) => b[1] - a[1]);
-            const maxSpend = sortedCats.length > 0 ? sortedCats[0][1] : 1; // Avoid divide by zero
-
-            sortedCats.forEach(([name, total]) => {
-                const percent = (total / maxSpend) * 100;
-                const html = `
-                    <div style="margin-bottom: 12px;">
-                        <div class="cat-row">
-                            <span>${name}</span>
-                            <span>$${total.toFixed(2)}</span>
-                        </div>
-                        <div class="cat-bar-bg">
-                            <div class="cat-bar-fill" style="width: ${percent}%;"></div>
-                        </div>
-                    </div>
-                `;
-                catContainer.innerHTML += html;
-            });
-
-            // 4. Render Table
-            const tbody = document.getElementById('tx-body');
-            tbody.innerHTML = ''; 
-            transactions.forEach(tx => {
-                const displayAmt = formatCurrency(tx.amount);
-                const colorClass = tx.amount < 0 ? 'negative' : 'positive';
-                
-                const row = `<tr>
-                    <td data-label="Date">${tx.date}</td>
-                    <td data-label="Description">${tx.description}</td>
-                    <td data-label="Category">${tx.category}</td>
-                    <td data-label="Amount" class="amount ${colorClass}">${displayAmt}</td>
-                </tr>`;
-                tbody.innerHTML += row;
-            });
-
-            document.getElementById('results-area').classList.remove('hidden');
-        }
-
-        // --- AUTH LOGIC ---
-        async function checkUser() {
-            const { data: { session } } = await client.auth.getSession();
-            updateUI(session);
-        }
-
-        document.getElementById('login-btn').onclick = async () => {
-            const email = document.getElementById('email').value;
-            const password = document.getElementById('password').value;
-            const { error } = await client.auth.signInWithPassword({ email, password });
-            if (error) document.getElementById('msg').innerText = error.message;
-            else checkUser();
-        };
-
-        document.getElementById('signup-btn').onclick = async () => {
-            const email = document.getElementById('email').value;
-            const password = document.getElementById('password').value;
-            const { error } = await client.auth.signUp({ email, password });
-            if (error) document.getElementById('msg').innerText = error.message;
-            else alert("Account created!");
-        };
-
-        document.getElementById('logout-btn').onclick = async () => {
-            await client.auth.signOut();
-            updateUI(null);
-        };
-
-        function updateUI(session) {
-            if (session) {
-                document.getElementById('auth-section').classList.add('hidden');
-                document.getElementById('app-section').classList.remove('hidden');
-                document.getElementById('user-email').innerText = session.user.email;
-            } else {
-                document.getElementById('auth-section').classList.remove('hidden');
-                document.getElementById('app-section').classList.add('hidden');
-                document.getElementById('msg').innerText = "";
-            }
-        }
-
-        checkUser();
-    </script>
+    <script src="app.js"></script>
 </body>
 </html>
