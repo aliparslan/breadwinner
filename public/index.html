@@ -2,10 +2,11 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"> <title>Breadwinner</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Breadwinner</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        /* --- 1. Base Styles (Desktop) --- */
+        /* --- 1. Base Styles --- */
         body { 
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             background-color: #f9fafb;
@@ -18,7 +19,7 @@
 
         #app-container {
             width: 100%;
-            max-width: 800px; /* Keeps it readable on big screens */
+            max-width: 800px;
             background: white;
             padding: 2rem;
             border-radius: 12px;
@@ -26,13 +27,15 @@
         }
 
         h1 { margin-top: 0; font-size: 1.8rem; }
+        h3 { margin-bottom: 10px; color: #333; }
+
         input, button { 
             width: 100%; 
             padding: 12px; 
             margin: 8px 0; 
             border-radius: 6px; 
             border: 1px solid #ccc;
-            font-size: 16px; /* Prevents auto-zoom on iPhone */
+            font-size: 16px;
             box-sizing: border-box;
         }
 
@@ -61,22 +64,42 @@
         }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-        /* --- 2. Table Styles (Desktop) --- */
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th, td { 
-            padding: 12px; 
-            text-align: left; 
-            border-bottom: 1px solid #eaeaea; 
+        /* --- 2. Summary & Analysis Styles (NEW) --- */
+        .summary-cards {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-top: 20px;
         }
+        .card {
+            background: #f4f4f4;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .card h4 { margin: 0 0 5px 0; font-size: 0.9rem; color: #666; }
+        .card p { margin: 0; font-size: 1.2rem; font-weight: bold; }
+        
+        .cat-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+        }
+        .cat-bar-bg { background: #eee; height: 6px; border-radius: 3px; overflow: hidden; margin-top: 4px; }
+        .cat-bar-fill { background: #0070f3; height: 100%; }
+
+        /* --- 3. Table Styles --- */
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #eaeaea; }
         th { background-color: #f4f4f4; font-weight: 600; color: #555; }
         .amount { text-align: right; font-family: monospace; font-weight: bold; }
+        .negative { color: #d32f2f; } /* Red for spending */
+        .positive { color: #0070f3; } /* Blue for income */
 
-        /* --- 3. Mobile Magic (The "Card View") --- */
+        /* --- 4. Mobile Magic --- */
         @media screen and (max-width: 600px) {
-            /* Hide the table header row completely */
             thead { display: none; }
-
-            /* Turn rows into cards */
             tr {
                 display: block;
                 margin-bottom: 15px;
@@ -85,8 +108,6 @@
                 background: white;
                 box-shadow: 0 1px 3px rgba(0,0,0,0.05);
             }
-
-            /* Turn cells into rows inside the card */
             td {
                 display: flex;
                 justify-content: space-between;
@@ -96,10 +117,7 @@
                 padding: 10px 15px;
                 text-align: right;
             }
-
             td:last-child { border-bottom: none; }
-
-            /* Inject the column name (e.g., "Date") before the value */
             td::before {
                 content: attr(data-label);
                 font-weight: 600;
@@ -108,9 +126,6 @@
                 font-size: 12px;
                 text-align: left;
             }
-
-            /* Special styling for specific columns */
-            td.amount { color: #0070f3; font-size: 16px; }
         }
     </style>
 </head>
@@ -145,7 +160,28 @@
             <p id="status" style="text-align:center; margin-top:10px; color:#666;"></p>
 
             <div id="results-area" class="hidden">
-                <h3 style="margin-top: 30px;">Transactions</h3>
+                
+                <h3 style="margin-top: 30px;">Summary</h3>
+                <div class="summary-cards">
+                    <div class="card">
+                        <h4>Income</h4>
+                        <p id="sum-income" class="positive">$0.00</p>
+                    </div>
+                    <div class="card">
+                        <h4>Expenses</h4>
+                        <p id="sum-expense" class="negative">$0.00</p>
+                    </div>
+                    <div class="card">
+                        <h4>Net</h4>
+                        <p id="sum-net">$0.00</p>
+                    </div>
+                </div>
+
+                <h3 style="margin-top: 30px;">Top Spending Categories</h3>
+                <div id="category-list" style="margin-bottom: 30px;">
+                    </div>
+
+                <h3>All Transactions</h3>
                 <table id="tx-table">
                     <thead>
                         <tr>
@@ -164,12 +200,20 @@
     <script>
         // --- CONFIGURATION ---
         const SUPABASE_URL = 'https://ahvfdteobwmrqkiorhpv.supabase.co';
-        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFodmZkdGVvYndtcnFraW9yaHB2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjgyNzI5NzMsImV4cCI6MjA4Mzg0ODk3M30.2K314udaXPAKiWalxXLNmZHqvv9YQ7iQnUtYyONTPrI';
+        const SUPABASE_KEY = 'YOUR_EYJ_KEY_HERE'; // <--- PASTE KEY HERE ONE LAST TIME
         
         const client = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        // --- UPLOAD LOGIC ---
+        // --- HELPER: Fix Currency Display ---
+        // Turns -4.50 into "-$4.50" and 4.50 into "+$4.50"
+        function formatCurrency(amount) {
+            const num = parseFloat(amount);
+            const isNeg = num < 0;
+            const absVal = Math.abs(num).toFixed(2);
+            return (isNeg ? '-$' : '$') + absVal;
+        }
 
+        // --- UPLOAD LOGIC ---
         document.getElementById('upload-btn').onclick = async () => {
             const fileInput = document.getElementById('file-input');
             const file = fileInput.files[0];
@@ -180,14 +224,10 @@
                 return;
             }
 
-            // 1. Get the current user's token
             const { data: { session } } = await client.auth.getSession();
-            if (!session) {
-                alert("Please log in first!");
-                return;
-            }
+            if (!session) { alert("Please log in first!"); return; }
 
-            status.innerHTML = 'Analyzing & Saving... <div class="loader"></div>';
+            status.innerHTML = 'Analyzing... <div class="loader"></div>';
             
             const formData = new FormData();
             formData.append('file', file);
@@ -195,36 +235,89 @@
             try {
                 const response = await fetch('/api/upload', {
                     method: 'POST',
-                    // 2. Pass the token to the backend
-                    headers: {
-                        'Authorization': `Bearer ${session.access_token}`
-                    },
+                    headers: { 'Authorization': `Bearer ${session.access_token}` },
                     body: formData
                 });
 
                 if (!response.ok) throw new Error(await response.text());
 
                 const data = await response.json();
-                renderTable(data);
-                status.innerText = "✅ Saved to Database!";
+                renderDashboard(data); // New function to handle all rendering
+                status.innerText = "✅ Done!";
             } catch (error) {
                 status.innerText = "Error: " + error.message;
             }
         };
-        function renderTable(transactions) {
+
+        // --- RENDER LOGIC (The New Brain) ---
+        function renderDashboard(transactions) {
+            // 1. Calculate Totals
+            let income = 0;
+            let expense = 0;
+            const catTotals = {}; // { "Food": 150.00, "Rent": 500.00 }
+
+            transactions.forEach(tx => {
+                const amt = parseFloat(tx.amount);
+                
+                // Summary Math
+                if (amt > 0) income += amt;
+                else {
+                    expense += amt; // expense is negative, so we add it directly
+                    
+                    // Category Math (Only track spending for breakdown)
+                    const catName = tx.category || "Miscellaneous";
+                    if (!catTotals[catName]) catTotals[catName] = 0;
+                    catTotals[catName] += Math.abs(amt);
+                }
+            });
+
+            const net = income + expense;
+
+            // 2. Update Summary Cards
+            document.getElementById('sum-income').innerText = formatCurrency(income);
+            document.getElementById('sum-expense').innerText = formatCurrency(expense);
+            document.getElementById('sum-net').innerText = formatCurrency(net);
+            document.getElementById('sum-net').className = net >= 0 ? 'positive' : 'negative';
+
+            // 3. Render Category Bars (Sorted Highest to Lowest)
+            const catContainer = document.getElementById('category-list');
+            catContainer.innerHTML = '';
+            
+            const sortedCats = Object.entries(catTotals).sort((a, b) => b[1] - a[1]);
+            const maxSpend = sortedCats.length > 0 ? sortedCats[0][1] : 1; // Avoid divide by zero
+
+            sortedCats.forEach(([name, total]) => {
+                const percent = (total / maxSpend) * 100;
+                const html = `
+                    <div style="margin-bottom: 12px;">
+                        <div class="cat-row">
+                            <span>${name}</span>
+                            <span>$${total.toFixed(2)}</span>
+                        </div>
+                        <div class="cat-bar-bg">
+                            <div class="cat-bar-fill" style="width: ${percent}%;"></div>
+                        </div>
+                    </div>
+                `;
+                catContainer.innerHTML += html;
+            });
+
+            // 4. Render Table
             const tbody = document.getElementById('tx-body');
             tbody.innerHTML = ''; 
-            
             transactions.forEach(tx => {
-                // We add 'data-label' so CSS can display it on mobile
+                const displayAmt = formatCurrency(tx.amount);
+                const colorClass = tx.amount < 0 ? 'negative' : 'positive';
+                
                 const row = `<tr>
                     <td data-label="Date">${tx.date}</td>
                     <td data-label="Description">${tx.description}</td>
                     <td data-label="Category">${tx.category}</td>
-                    <td data-label="Amount" class="amount">$${tx.amount}</td>
+                    <td data-label="Amount" class="amount ${colorClass}">${displayAmt}</td>
                 </tr>`;
                 tbody.innerHTML += row;
             });
+
             document.getElementById('results-area').classList.remove('hidden');
         }
 
