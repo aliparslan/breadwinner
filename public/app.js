@@ -11,20 +11,29 @@ function formatCurrency(amount) {
   const num = parseFloat(amount);
   const isNeg = num < 0;
   const absVal = Math.abs(num).toFixed(2);
-  // Use standard minus sign
   return (isNeg ? "-$" : "$") + absVal;
 }
 
 function formatDate(dateString) {
-  // Returns "Dec 28"
   return new Date(dateString).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
 // --- CORE FETCH LOGIC ---
 let allCategories = [];
+let allTransactions = []; // Store raw data for filtering
+
 async function fetchTransactions() {
+  // Fetch Categories
   const { data: cats } = await client.from("categories").select("*").order("name");
   allCategories = cats || [];
+
+  // Populate Filter Dropdown
+  const filterSelect = document.getElementById("filter-category");
+  filterSelect.innerHTML =
+    '<option value="all">All Categories</option>' +
+    allCategories.map((c) => `<option value="${c.name}">${c.name}</option>`).join("");
+
+  // Fetch Transactions
   const { data, error } = await client
     .from("transactions")
     .select(`*, categories ( id, name )`)
@@ -34,13 +43,33 @@ async function fetchTransactions() {
     return;
   }
 
-  const formattedData = data.map((tx) => ({
+  // Format Data
+  allTransactions = data.map((tx) => ({
     ...tx,
     categoryName: tx.categories ? tx.categories.name : "Uncategorized",
     categoryId: tx.category_id,
   }));
-  renderDashboard(formattedData);
+
+  renderDashboard(allTransactions);
 }
+
+// --- FILTERING LOGIC ---
+function applyFilters() {
+  const search = document.getElementById("filter-search").value.toLowerCase();
+  const cat = document.getElementById("filter-category").value;
+
+  const filtered = allTransactions.filter((tx) => {
+    const matchesSearch = tx.description.toLowerCase().includes(search);
+    const matchesCat = cat === "all" || tx.categoryName === cat;
+    return matchesSearch && matchesCat;
+  });
+
+  renderDashboard(filtered);
+}
+
+// Attach listeners
+document.getElementById("filter-search").addEventListener("input", applyFilters);
+document.getElementById("filter-category").addEventListener("change", applyFilters);
 
 // --- RENDER ---
 function renderDashboard(transactions) {
@@ -63,12 +92,12 @@ function renderDashboard(transactions) {
   document.getElementById("sum-net").innerText = formatCurrency(net);
   document.getElementById("sum-net").className = net >= 0 ? "positive" : "negative";
 
+  // Categories Chart
   const catContainer = document.getElementById("category-list");
   catContainer.innerHTML = "";
   const sorted = Object.entries(catTotals).sort((a, b) => b[1] - a[1]);
   const max = sorted.length > 0 ? sorted[0][1] : 1;
 
-  // BETTER ICON MAPPING
   const getIcon = (n) => {
     const l = n.toLowerCase();
     if (l.includes("savings") || l.includes("invest")) return "📈";
@@ -79,7 +108,7 @@ function renderDashboard(transactions) {
     if (l.includes("transport") || l.includes("gas")) return "⛽️";
     if (l.includes("home") || l.includes("rent")) return "🏠";
     if (l.includes("income") || l.includes("paycheck")) return "💰";
-    return "📦"; // Box for misc
+    return "📦";
   };
 
   sorted.slice(0, 5).forEach(([name, total]) => {
@@ -97,6 +126,7 @@ function renderDashboard(transactions) {
             </div>`;
   });
 
+  // Transactions Table (Month Grouped)
   const container = document.getElementById("tx-table-container");
   container.innerHTML = "";
   const grouped = {};
@@ -118,7 +148,18 @@ function renderDashboard(transactions) {
     )}</span>
                 </div>
                 <div class="month-content">
-                    <table><tbody>${txs.map(renderRow).join("")}</tbody></table>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Description</th>
+                                <th>Category</th>
+                                <th>Amount</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>${txs.map(renderRow).join("")}</tbody>
+                    </table>
                 </div>
             </div>`;
     container.innerHTML += html;
@@ -127,18 +168,17 @@ function renderDashboard(transactions) {
 
 function renderRow(tx) {
   const isNeg = tx.amount < 0;
-  // Truncate logic
-  const desc = tx.description.length > 35 ? tx.description.substring(0, 32) + "..." : tx.description;
+  const desc = tx.description.length > 40 ? tx.description.substring(0, 38) + "..." : tx.description;
 
   return `
         <tr>
-            <td style="width:12%">${formatDate(tx.date)}</td>
-            <td style="width:38%">${desc}</td>
-            <td style="width:20%"><span>${tx.categoryName}</span></td>
-            <td style="width:15%; text-align:right; color:${isNeg ? "var(--text-main)" : "var(--accent-green)"}">
+            <td>${formatDate(tx.date)}</td>
+            <td>${desc}</td>
+            <td><span>${tx.categoryName}</span></td>
+            <td style="color:${isNeg ? "var(--text-main)" : "var(--accent-green)"}">
                 ${formatCurrency(tx.amount)}
             </td>
-            <td style="width:15%">
+            <td>
                 <div class="actions">
                     <button class="btn-action btn-edit" onclick="openEdit(${tx.id})">Edit</button>
                     <button class="btn-action btn-del" onclick="deleteTx(${tx.id})">Del</button>
@@ -146,6 +186,8 @@ function renderRow(tx) {
             </td>
         </tr>`;
 }
+
+// ... [Keep existing Toggle, Delete, Modal, Upload, Auth Logic below] ...
 
 function toggleMonth(el) {
   el.nextElementSibling.classList.toggle("collapsed");

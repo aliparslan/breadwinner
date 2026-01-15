@@ -2,22 +2,23 @@
 @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
 
 :root {
-  --bg-body: #f9fafb;
+  /* --- COLOR PALETTE --- */
+  /* Darker "Canvas" for better contrast */
+  --bg-body: #e5e7eb; /* Gray 200 - Significantly darker than before */
   --bg-card: #ffffff;
 
-  --text-main: #1f2937; /* Softer Black */
-  --text-secondary: #6b7280; /* Neutral Gray */
-  --text-muted: #9ca3af; /* Light Gray */
+  --text-main: #111827; /* Gray 900 */
+  --text-secondary: #4b5563; /* Gray 600 - Darker for readability */
+  --text-muted: #6b7280; /* Gray 500 */
 
-  --border: #f3f4f6; /* Very subtle border */
+  --border: #e5e7eb;
 
-  --primary: #111827;
-  --accent-green: #10b981; /* Vibrant Emerald */
-  --accent-red: #ef4444; /* Vibrant Red */
+  --primary: #111827; /* Black/Charcoal */
+  --accent-green: #059669; /* Emerald 600 */
+  --accent-red: #dc2626; /* Red 600 */
 
-  /* Badge Colors */
   --badge-bg: #f3f4f6;
-  --badge-text: #4b5563;
+  --badge-text: #374151;
 }
 
 body {
@@ -43,17 +44,16 @@ body {
   padding: 2.5rem;
   background: var(--bg-card);
   border-radius: 24px;
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05); /* Softer, deeper shadow */
-  border: 1px solid var(--border);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
 }
 .auth-buttons button {
   width: 100%;
 }
 
-/* --- Inputs --- */
+/* --- Inputs & Filters --- */
 .input-label {
   font-size: 0.75rem;
-  font-weight: 600;
+  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: var(--text-secondary);
@@ -82,9 +82,9 @@ select {
   width: 100%;
   padding: 12px;
   background: #ffffff;
-  border: 1px solid #e5e7eb;
-  border-radius: 10px;
-  font-size: 15px;
+  border: 1px solid #d1d5db; /* Darker border for contrast */
+  border-radius: 8px;
+  font-size: 0.95rem;
   color: var(--text-main);
   box-sizing: border-box;
   transition: all 0.2s;
@@ -101,7 +101,7 @@ button {
   padding: 10px 18px;
   font-weight: 600;
   font-size: 0.9rem;
-  border-radius: 10px;
+  border-radius: 8px;
   border: 1px solid transparent;
   cursor: pointer;
   transition: all 0.1s;
@@ -109,7 +109,7 @@ button {
 button.primary-btn {
   background: var(--primary);
   color: white;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); /* Stronger shadow */
 }
 button.primary-btn:hover {
   background: #000;
@@ -118,12 +118,12 @@ button.primary-btn:hover {
 
 button.secondary {
   background: white;
-  border: 1px solid #e5e7eb;
+  border: 1px solid #d1d5db;
   color: var(--text-main);
 }
 button.secondary:hover {
   background: #f9fafb;
-  border-color: #d1d5db;
+  border-color: #9ca3af;
 }
 
 /* --- Header --- */
@@ -137,6 +137,7 @@ button.secondary:hover {
   font-size: 1.75rem;
   font-weight: 800;
   letter-spacing: -0.03em;
+  color: var(--primary);
 }
 .user-controls {
   display: flex;
@@ -146,7 +147,7 @@ button.secondary:hover {
 #user-email {
   color: var(--text-secondary);
   font-size: 0.85rem;
-  font-weight: 500;
+  font-weight: 600;
 }
 
 /* --- Summary Cards --- */
@@ -159,9 +160,8 @@ button.secondary:hover {
 .card {
   background: var(--bg-card);
   padding: 24px;
-  border-radius: 20px;
-  border: 1px solid rgba(0, 0, 0, 0.03);
-  /* No shadow makes it look cleaner, like a dashboard widget */
+  border-radius: 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05); /* Clean float */
 }
 .card h4 {
   font-size: 0.7rem;
@@ -173,31 +173,44 @@ button.secondary:hover {
 }
 .card p {
   font-size: 1.8rem;
-  font-weight: 700;
+  font-weight: 800;
   letter-spacing: -0.03em;
   margin: 0;
+  color: var(--primary);
 }
 .positive {
   color: var(--accent-green);
 }
 
-/* --- Section Headers --- */
+/* --- Section Headers & Filter Bar --- */
 .section-header {
   display: flex;
   justify-content: space-between;
-  align-items: flex-end;
+  align-items: center;
   margin-bottom: 20px;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 2px solid #e5e7eb;
   padding-bottom: 15px;
 }
 .section-header h3 {
   font-size: 1.1rem;
   font-weight: 700;
   color: var(--text-main);
+  margin: 0;
 }
 .header-actions {
   display: flex;
   gap: 10px;
+}
+
+.filter-bar {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+.filter-bar input,
+.filter-bar select {
+  margin: 0;
+  border-color: #d1d5db;
 }
 
 /* --- Categories List --- */
@@ -208,13 +221,14 @@ button.secondary:hover {
   display: flex;
   align-items: center;
   padding: 14px 0;
-  border-bottom: 1px solid #f9fafb;
+  border-bottom: 1px solid #e5e7eb;
 }
 .cat-icon {
   width: 36px;
   height: 36px;
-  background: #f3f4f6;
-  border-radius: 50%; /* Circle icons are friendlier */
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -233,60 +247,89 @@ button.secondary:hover {
 }
 .cat-bar-bg {
   height: 6px;
-  background: #f3f4f6;
+  background: #e5e7eb;
   border-radius: 3px;
   overflow: hidden;
 }
 .cat-bar-fill {
   height: 100%;
-  background: var(--text-main);
+  background: var(--primary);
   border-radius: 3px;
   opacity: 0.8;
 }
 
 /* --- Table Styles --- */
 .month-group {
-  margin-bottom: 40px;
+  margin-bottom: 30px;
+  border-radius: 12px;
+  overflow: hidden;
+  background: white;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05); /* Adds depth against the gray background */
 }
 
 .month-header {
   font-size: 0.85rem;
   font-weight: 700;
-  color: var(--text-secondary);
+  color: var(--text-main);
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  padding: 10px 0;
-  border-bottom: 2px solid var(--border);
-  margin-bottom: 10px;
+  padding: 14px 20px;
+  background: #f9fafb;
+  border-bottom: 1px solid var(--border);
   display: flex;
   justify-content: space-between;
   cursor: pointer;
 }
 .month-header:hover {
-  color: var(--text-main);
-  border-color: var(--text-main);
+  background: #f3f4f6;
 }
 
 table {
   width: 100%;
-  border-collapse: separate;
-  border-spacing: 0;
+  border-collapse: collapse;
 }
 
+/* Table Headers (Visible on Desktop) */
+thead {
+  background: #ffffff;
+  border-bottom: 1px solid var(--border);
+}
+th {
+  text-align: left;
+  padding: 12px 20px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+th:last-child {
+  text-align: right;
+}
+th:nth-child(4) {
+  text-align: right;
+}
+
+/* Rows */
 tr {
+  border-bottom: 1px solid #f3f4f6;
   transition: background 0.1s;
 }
-tr:hover td {
-  background: #fafafa;
+tr:last-child {
+  border-bottom: none;
+}
+
+/* Zebra Striping */
+tbody tr:nth-child(even) {
+  background-color: #fafafa;
+}
+tbody tr:hover {
+  background-color: #f3f4f6;
 }
 
 td {
-  padding: 16px 12px;
+  padding: 16px 20px;
   vertical-align: middle;
-  border-bottom: 1px solid #f3f4f6;
-}
-tr:last-child td {
-  border-bottom: none;
 }
 
 /* 1. DATE */
@@ -301,36 +344,45 @@ td:nth-child(1) {
 /* 2. DESCRIPTION */
 td:nth-child(2) {
   color: var(--text-main);
-  font-weight: 500; /* Reduced from bold */
-  font-size: 0.95rem;
+  font-weight: 500;
+  font-size: 0.9rem;
   width: 38%;
 }
 
-/* 3. CATEGORY (The Pill Fix) */
+/* 3. CATEGORY */
 td:nth-child(3) {
   width: 20%;
 }
+
 td:nth-child(3) span {
   background: var(--badge-bg);
   color: var(--badge-text);
   padding: 4px 10px;
-  border-radius: 999px; /* Pill Shape */
-  font-size: 0.75rem;
+  border-radius: 999px;
+  font-size: 0.7rem;
   font-weight: 600;
-  text-transform: capitalize; /* Title Case (Friendly) */
+  text-transform: capitalize;
+  border: 1px solid #e5e7eb;
+
+  /* THE FIX: Force single line + Truncate */
   display: inline-block;
+  white-space: nowrap; /* Prevents wrapping */
+  max-width: 140px; /* Limits width so it doesn't stretch the table */
+  overflow: hidden; /* Hides overflow */
+  text-overflow: ellipsis; /* Adds "..." at the end */
+  vertical-align: middle;
 }
 
 /* 4. AMOUNT */
 td:nth-child(4) {
   text-align: right;
-  font-weight: 600;
+  font-weight: 700;
   font-size: 0.95rem;
   width: 15%;
   font-feature-settings: "tnum";
 }
 
-/* 5. ACTIONS */
+/* 5. ACTIONS (Desktop) */
 td:nth-child(5) {
   text-align: right;
   width: 15%;
@@ -344,37 +396,51 @@ td:nth-child(5) {
 }
 tr:hover .actions {
   opacity: 1;
-}
+} /* Reveal on Hover */
 
 .btn-action {
-  padding: 4px 10px;
+  padding: 6px 10px;
   font-size: 0.75rem;
   background: white;
-  border: 1px solid var(--border);
+  border: 1px solid #d1d5db;
   color: var(--text-secondary);
   border-radius: 6px;
+  font-weight: 600;
 }
 .btn-action:hover {
-  border-color: var(--text-main);
-  color: var(--text-main);
+  border-color: var(--primary);
+  color: var(--primary);
+}
+.btn-del:hover {
+  border-color: var(--accent-red);
+  color: var(--accent-red);
 }
 
-/* --- Mobile (The Receipt Fix) --- */
+/* --- MOBILE RESPONSIVENESS --- */
 @media screen and (max-width: 600px) {
   #app-container {
-    padding: 15px;
+    padding: 20px 15px;
   }
+
   .dashboard-header {
     flex-direction: column;
     align-items: flex-start;
-    gap: 20px;
+    gap: 15px;
   }
   .user-controls {
     width: 100%;
     justify-content: space-between;
   }
+
+  /* Cards stack */
   .summary-cards {
     grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  /* Filters stack */
+  .filter-bar {
+    flex-direction: column;
   }
   .header-actions {
     width: 100%;
@@ -384,49 +450,74 @@ tr:hover .actions {
     justify-content: center;
   }
 
+  /* --- THE MOBILE TABLE (CARD VIEW) --- */
   thead {
     display: none;
   }
 
+  .month-group {
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    overflow: visible;
+  }
+  .month-header {
+    background: transparent;
+    border: none;
+    padding: 0 0 10px 0;
+    color: var(--text-secondary);
+  }
+  .month-content {
+    background: transparent;
+  }
+  table {
+    background: transparent;
+  }
+
   tr {
     display: grid;
-    grid-template-columns: 1fr auto; /* Name vs Amount */
+    grid-template-columns: 1fr auto; /* Left content | Right content */
     grid-template-areas:
       "date amount"
       "desc desc"
       "cat actions";
-    background: white;
-    border: 1px solid var(--border);
-    border-radius: 16px;
+
+    background: #ffffff; /* White Card */
+    border: 1px solid #d1d5db; /* Distinct border */
+    border-radius: 12px;
     padding: 16px;
     margin-bottom: 12px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05); /* Soft Shadow */
     gap: 8px;
+
+    /* Reset Table Styles */
+    background-color: white !important;
   }
 
   td {
     border: none;
     padding: 0;
-    background: transparent !important;
   }
 
-  /* Date: Small & Top Left */
+  /* 1. Date (Top Left) */
   td:nth-child(1) {
     grid-area: date;
     font-size: 0.75rem;
     color: var(--text-muted);
-    font-weight: 500;
+    font-weight: 600;
+    text-transform: uppercase;
   }
 
-  /* Amount: Bold & Top Right (Hero) */
+  /* 2. Amount (Top Right - High Vis) */
   td:nth-child(4) {
     grid-area: amount;
     align-self: start;
-    font-size: 1rem;
-    font-weight: 700;
+    font-size: 1.1rem;
+    font-weight: 800;
     color: var(--text-main);
   }
 
-  /* Description: Full Width */
+  /* 3. Description (Middle) */
   td:nth-child(2) {
     grid-area: desc;
     font-size: 1rem;
@@ -436,29 +527,30 @@ tr:hover .actions {
     margin-bottom: 8px;
   }
 
-  /* Category Badge */
+  /* 4. Category (Bottom Left) */
   td:nth-child(3) {
     grid-area: cat;
-    align-self: end;
-  }
-  td:nth-child(3) span {
-    font-size: 0.7rem;
-    padding: 4px 8px;
-    background: #f3f4f6;
+    align-self: center;
   }
 
-  /* Actions */
+  /* 5. Actions (Bottom Right - ALWAYS VISIBLE) */
   td:nth-child(5) {
     grid-area: actions;
     align-self: end;
+    justify-self: end;
   }
+
+  /* Mobile Action Buttons: Big Touch Targets */
   .actions {
     opacity: 1;
+    gap: 10px;
   }
   .btn-action {
-    padding: 6px 12px;
-    background: #f9fafb;
-    border: none;
+    padding: 8px 14px;
+    font-size: 0.8rem;
+    background: #f3f4f6;
+    border: 1px solid #e5e7eb;
+    color: var(--text-main);
   }
 }
 
