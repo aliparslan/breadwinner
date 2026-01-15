@@ -1,7 +1,8 @@
 // public/app.js
 
-// ---- CONFIGURATION ----
+// --- CONFIGURATION ---
 const SUPABASE_URL = "https://ahvfdteobwmrqkiorhpv.supabase.co";
+// Your provided key
 const SUPABASE_KEY =
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFodmZkdGVvYndtcnFraW9yaHB2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjgyNzI5NzMsImV4cCI6MjA4Mzg0ODk3M30.2K314udaXPAKiWalxXLNmZHqvv9YQ7iQnUtYyONTPrI";
 const client = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -239,21 +240,56 @@ async function saveEdit() {
   }
 }
 
+// --- NEW: PDF TEXT EXTRACTION ---
+async function extractTextFromPDF(file) {
+  try {
+    const arrayBuffer = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
+    let fullText = "";
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i);
+      const textContent = await page.getTextContent();
+      fullText += `--- PAGE ${i} ---\n` + textContent.items.map((item) => item.str).join(" ") + "\n";
+    }
+    return fullText;
+  } catch (e) {
+    console.error("PDF Extraction failed:", e);
+    return null;
+  }
+}
+
+// --- HYBRID UPLOAD LOGIC ---
 const triggerBtn = document.getElementById("trigger-upload-btn");
 const fileInput = document.getElementById("file-input");
+
 if (triggerBtn && fileInput) {
   triggerBtn.onclick = () => fileInput.click();
   fileInput.onchange = async () => {
     const file = fileInput.files[0];
     if (!file) return;
+
     const status = document.getElementById("status");
     const {
       data: { session },
     } = await client.auth.getSession();
-    status.innerHTML = 'PROCESSING... <div class="loader"></div>';
+
+    status.innerHTML = 'READING DOCUMENT... <div class="loader"></div>';
+
+    // 1. Try Local Extraction (Fast)
+    const rawText = await extractTextFromPDF(file);
+
     const formData = new FormData();
-    formData.append("file", file);
+    if (rawText && rawText.length > 50) {
+      console.log("Mode: Raw Text (Fast)");
+      formData.append("text", rawText);
+      formData.append("filename", file.name);
+    } else {
+      console.log("Mode: OCR (Slow)");
+      formData.append("file", file);
+    }
+
     try {
+      status.innerHTML = 'ANALYZING... <div class="loader"></div>';
       const response = await fetch("/api/upload", {
         method: "POST",
         headers: { Authorization: `Bearer ${session.access_token}` },

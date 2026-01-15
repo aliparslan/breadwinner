@@ -261,7 +261,7 @@ button.secondary:hover {
   border-radius: 2px;
 }
 
-/* --- Table & Desktop View --- */
+/* --- Table --- */
 .month-group {
   margin-top: 30px;
 }
@@ -382,7 +382,7 @@ tr:hover .actions {
   }
 }
 
-/* --- MOBILE RESPONSIVENESS (Refined) --- */
+/* --- MOBILE RESPONSIVENESS (The Receipt Grid) --- */
 @media screen and (max-width: 600px) {
   #app-container {
     padding: 20px 15px;
@@ -393,6 +393,13 @@ tr:hover .actions {
     border: none;
     background: transparent;
     padding: 0;
+  }
+
+  .auth-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 12px; /* Adds space between Initialize and Create User */
+    margin-top: 10px;
   }
 
   .dashboard-header {
@@ -432,37 +439,28 @@ tr:hover .actions {
     justify-content: center;
   }
 
-  /* The "Receipt" Card Layout */
   thead {
     display: none;
   }
   tr {
     display: grid;
-    grid-template-columns: 1fr auto; /* Left side vs Right side */
-    grid-template-areas:
-      "date amount"
-      "desc desc"
-      "cat actions";
-    gap: 8px 0; /* Cleaner vertical spacing */
-
+    grid-template-columns: 1fr auto;
+    grid-template-areas: "date amount" "desc desc" "cat actions";
+    gap: 8px 0;
     background: var(--bg-card);
     border: 1px solid var(--border);
-    padding: 16px; /* Breathing room */
+    padding: 16px;
     margin-bottom: 15px;
     border-radius: 6px;
   }
-
-  /* 1. Date (Top Left) - No squishing */
   td:nth-child(1) {
     grid-area: date;
     border: none;
     padding: 0;
     font-size: 0.75rem;
     align-self: start;
-    white-space: nowrap; /* Prevents "Dec \n 28" stacking */
+    white-space: nowrap;
   }
-
-  /* 2. Description (Middle) */
   td:nth-child(2) {
     grid-area: desc;
     border: none;
@@ -470,40 +468,32 @@ tr:hover .actions {
     font-size: 1rem;
     color: #fff;
     line-height: 1.4;
-    border-bottom: 1px dashed var(--border); /* Subtle divider */
+    border-bottom: 1px dashed var(--border);
     margin-bottom: 6px;
   }
-
-  /* 3. Category (Bottom Left) - THE FIX */
   td:nth-child(3) {
     grid-area: cat;
     border: none;
     padding: 0;
     align-self: end;
   }
-
-  /* Target the span inside for proper display */
   td:nth-child(3) span {
     display: inline-block;
-    white-space: nowrap; /* Force single line */
-    max-width: 150px; /* Truncate if insanely long */
+    white-space: nowrap;
+    max-width: 150px;
     overflow: hidden;
     text-overflow: ellipsis;
     vertical-align: bottom;
   }
-
-  /* 4. Amount (Top Right) */
   td:nth-child(4) {
     grid-area: amount;
     border: none;
     padding: 0;
     text-align: right;
-    font-size: 1.1rem; /* Slightly bigger */
+    font-size: 1.1rem;
     font-weight: bold;
     align-self: start;
   }
-
-  /* 5. Actions (Bottom Right) */
   td:nth-child(5) {
     grid-area: actions;
     border: none;
@@ -511,7 +501,6 @@ tr:hover .actions {
     align-self: end;
     justify-self: end;
   }
-
   .actions {
     opacity: 1;
     margin-top: 0;
