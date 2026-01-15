@@ -6,31 +6,29 @@ const SUPABASE_KEY =
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFodmZkdGVvYndtcnFraW9yaHB2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjgyNzI5NzMsImV4cCI6MjA4Mzg0ODk3M30.2K314udaXPAKiWalxXLNmZHqvv9YQ7iQnUtYyONTPrI";
 const client = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-// --- STATE ---
-let allCategories = [];
-
 // --- HELPERS ---
 function formatCurrency(amount) {
   const num = parseFloat(amount);
   const isNeg = num < 0;
   const absVal = Math.abs(num).toFixed(2);
+  // Use standard minus sign
   return (isNeg ? "-$" : "$") + absVal;
 }
 
 function formatDate(dateString) {
-  return new Date(dateString).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  // Returns "Dec 28"
+  return new Date(dateString).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
 // --- CORE FETCH LOGIC ---
+let allCategories = [];
 async function fetchTransactions() {
   const { data: cats } = await client.from("categories").select("*").order("name");
   allCategories = cats || [];
-
   const { data, error } = await client
     .from("transactions")
     .select(`*, categories ( id, name )`)
     .order("date", { ascending: false });
-
   if (error) {
     console.error(error);
     return;
@@ -38,27 +36,24 @@ async function fetchTransactions() {
 
   const formattedData = data.map((tx) => ({
     ...tx,
-    categoryName: tx.categories ? tx.categories.name : "Miscellaneous",
+    categoryName: tx.categories ? tx.categories.name : "Uncategorized",
     categoryId: tx.category_id,
   }));
-
   renderDashboard(formattedData);
 }
 
-// --- RENDER LOGIC ---
+// --- RENDER ---
 function renderDashboard(transactions) {
   let income = 0;
   let expense = 0;
   const catTotals = {};
-
   transactions.forEach((tx) => {
     const amt = parseFloat(tx.amount);
     if (amt > 0) income += amt;
     else {
       expense += amt;
-      const catName = tx.categoryName;
-      if (!catTotals[catName]) catTotals[catName] = 0;
-      catTotals[catName] += Math.abs(amt);
+      const c = tx.categoryName;
+      catTotals[c] = (catTotals[c] || 0) + Math.abs(amt);
     }
   });
 
@@ -70,107 +65,107 @@ function renderDashboard(transactions) {
 
   const catContainer = document.getElementById("category-list");
   catContainer.innerHTML = "";
-  const sortedCats = Object.entries(catTotals).sort((a, b) => b[1] - a[1]);
-  const maxSpend = sortedCats.length > 0 ? sortedCats[0][1] : 1;
+  const sorted = Object.entries(catTotals).sort((a, b) => b[1] - a[1]);
+  const max = sorted.length > 0 ? sorted[0][1] : 1;
 
-  const getIcon = (name) => {
-    const lower = name.toLowerCase();
-    if (lower.includes("food") || lower.includes("dining")) return "🍔";
-    if (lower.includes("tech") || lower.includes("utility")) return "⚡️";
-    if (lower.includes("transport") || lower.includes("gas")) return "⛽️";
-    if (lower.includes("home") || lower.includes("rent")) return "🏠";
-    return "📦";
+  // BETTER ICON MAPPING
+  const getIcon = (n) => {
+    const l = n.toLowerCase();
+    if (l.includes("savings") || l.includes("invest")) return "📈";
+    if (l.includes("debt") || l.includes("loan")) return "💳";
+    if (l.includes("fee") || l.includes("bank")) return "🏦";
+    if (l.includes("food") || l.includes("restaurant")) return "🍔";
+    if (l.includes("tech") || l.includes("software")) return "💻";
+    if (l.includes("transport") || l.includes("gas")) return "⛽️";
+    if (l.includes("home") || l.includes("rent")) return "🏠";
+    if (l.includes("income") || l.includes("paycheck")) return "💰";
+    return "📦"; // Box for misc
   };
 
-  sortedCats.slice(0, 4).forEach(([name, total]) => {
-    const percent = (total / maxSpend) * 100;
+  sorted.slice(0, 5).forEach(([name, total]) => {
+    const pct = (total / max) * 100;
     catContainer.innerHTML += `
             <div class="cat-item">
                 <div class="cat-icon">${getIcon(name)}</div>
                 <div class="cat-details">
                     <div class="cat-row">
-                        <span style="color:#f3f4f6">${name}</span>
-                        <span style="font-family:monospace">${formatCurrency(total * -1)}</span>
+                        <span class="cat-name">${name}</span>
+                        <span class="cat-amount">${formatCurrency(total * -1)}</span>
                     </div>
-                    <div class="cat-bar-bg"><div class="cat-bar-fill" style="width: ${percent}%;"></div></div>
+                    <div class="cat-bar-bg"><div class="cat-bar-fill" style="width: ${pct}%;"></div></div>
                 </div>
             </div>`;
   });
 
   const container = document.getElementById("tx-table-container");
   container.innerHTML = "";
-
   const grouped = {};
   transactions.forEach((tx) => {
-    const [y, m, d] = tx.date.split("-");
-    const dateObj = new Date(y, m - 1, d);
-    const monthKey = dateObj.toLocaleString("default", { month: "long", year: "numeric" }).toUpperCase();
-    if (!grouped[monthKey]) grouped[monthKey] = [];
-    grouped[monthKey].push(tx);
+    const d = new Date(tx.date.split("-"));
+    const k = d.toLocaleString("default", { month: "long", year: "numeric" });
+    if (!grouped[k]) grouped[k] = [];
+    grouped[k].push(tx);
   });
 
   for (const [month, txs] of Object.entries(grouped)) {
-    const monthTotal = txs.reduce((sum, t) => sum + parseFloat(t.amount), 0);
-    const groupHtml = `
+    const total = txs.reduce((s, t) => s + parseFloat(t.amount), 0);
+    const html = `
             <div class="month-group">
                 <div class="month-header" onclick="toggleMonth(this)">
-                    <span>${month} <span style="font-size:0.8rem; opacity:0.5; margin-left:8px;">[${
-      txs.length
-    }]</span></span>
-                    <span class="${monthTotal >= 0 ? "positive" : "negative"}">${formatCurrency(monthTotal)}</span>
+                    <span>${month}</span>
+                    <span style="color: ${total >= 0 ? "var(--accent-green)" : "var(--text-main)"}">${formatCurrency(
+      total
+    )}</span>
                 </div>
                 <div class="month-content">
                     <table><tbody>${txs.map(renderRow).join("")}</tbody></table>
                 </div>
             </div>`;
-    container.innerHTML += groupHtml;
+    container.innerHTML += html;
   }
 }
 
 function renderRow(tx) {
-  const colorClass = tx.amount < 0 ? "negative" : "positive";
+  const isNeg = tx.amount < 0;
+  // Truncate logic
   const desc = tx.description.length > 35 ? tx.description.substring(0, 32) + "..." : tx.description;
+
   return `
         <tr>
-            <td style="width:15%; font-size:0.85rem;">${formatDate(tx.date)}</td>
-            <td style="width:30%; color: #f3f4f6; font-weight:600;">${desc}</td>
-            <td style="width:20%">
-                <span style="border:1px solid #374151; color:#9ca3af; padding:4px 8px; border-radius:4px; font-size:0.75rem; text-transform:uppercase;">${
-                  tx.categoryName
-                }</span>
+            <td style="width:12%">${formatDate(tx.date)}</td>
+            <td style="width:38%">${desc}</td>
+            <td style="width:20%"><span>${tx.categoryName}</span></td>
+            <td style="width:15%; text-align:right; color:${isNeg ? "var(--text-main)" : "var(--accent-green)"}">
+                ${formatCurrency(tx.amount)}
             </td>
-            <td class="amount ${colorClass}" style="width:15%; text-align:right;">${formatCurrency(tx.amount)}</td>
-            <td style="width:20%; text-align:right;">
+            <td style="width:15%">
                 <div class="actions">
-                    <button class="btn-action btn-edit" onclick="openEdit(${tx.id})">[EDIT]</button>
-                    <button class="btn-action btn-del" onclick="deleteTx(${tx.id})">[DEL]</button>
+                    <button class="btn-action btn-edit" onclick="openEdit(${tx.id})">Edit</button>
+                    <button class="btn-action btn-del" onclick="deleteTx(${tx.id})">Del</button>
                 </div>
             </td>
         </tr>`;
 }
 
-function toggleMonth(header) {
-  header.nextElementSibling.classList.toggle("collapsed");
+function toggleMonth(el) {
+  el.nextElementSibling.classList.toggle("collapsed");
 }
-
 async function deleteTx(id) {
-  if (!confirm("Confirm deletion of record?")) return;
-  const { error } = await client.from("transactions").delete().eq("id", id);
-  if (error) alert(error.message);
-  else fetchTransactions();
+  if (!confirm("Delete this transaction?")) return;
+  await client.from("transactions").delete().eq("id", id);
+  fetchTransactions();
 }
 
 let currentEditId = null;
 function openAddModal() {
   currentEditId = null;
-  document.getElementById("modal-title").innerText = "NEW TRANSACTION";
+  document.getElementById("modal-title").innerText = "New Transaction";
   document.getElementById("edit-desc").value = "";
   document.getElementById("edit-amount").value = "";
   document.getElementById("edit-date").value = new Date().toISOString().split("T")[0];
-  renderCategoryOptions();
+  renderCats();
   document.getElementById("edit-modal").classList.remove("hidden");
 }
-
 function openEdit(id) {
   client
     .from("transactions")
@@ -179,166 +174,111 @@ function openEdit(id) {
     .single()
     .then(({ data }) => {
       currentEditId = id;
-      document.getElementById("modal-title").innerText = "EDIT RECORD";
+      document.getElementById("modal-title").innerText = "Edit Transaction";
       document.getElementById("edit-desc").value = data.description;
       document.getElementById("edit-amount").value = data.amount;
       document.getElementById("edit-date").value = data.date;
-      renderCategoryOptions(data.category_id);
+      renderCats(data.category_id);
       document.getElementById("edit-modal").classList.remove("hidden");
     });
 }
-
-function renderCategoryOptions(selectedId = null) {
-  const select = document.getElementById("edit-category");
-  select.innerHTML = allCategories
-    .map((c) => `<option value="${c.id}" ${c.id == selectedId ? "selected" : ""}>${c.name.toUpperCase()}</option>`)
+function renderCats(sel) {
+  document.getElementById("edit-category").innerHTML = allCategories
+    .map((c) => `<option value="${c.id}" ${c.id == sel ? "selected" : ""}>${c.name}</option>`)
     .join("");
 }
-
 function closeModal() {
   document.getElementById("edit-modal").classList.add("hidden");
 }
 
 async function saveEdit() {
   const desc = document.getElementById("edit-desc").value;
-  const amount = document.getElementById("edit-amount").value;
+  const amt = document.getElementById("edit-amount").value;
   const date = document.getElementById("edit-date").value;
-  const catId = document.getElementById("edit-category").value;
+  const cat = document.getElementById("edit-category").value;
   const {
     data: { session },
   } = await client.auth.getSession();
 
-  let error;
-  if (currentEditId) {
-    const res = await client
-      .from("transactions")
-      .update({
-        description: desc,
-        amount: amount,
-        category_id: catId,
-        date: date,
-      })
-      .eq("id", currentEditId);
-    error = res.error;
-  } else {
-    const res = await client.from("transactions").insert({
-      user_id: session.user.id,
-      description: desc,
-      amount: amount,
-      category_id: catId,
-      date: date,
-      statement_id: null,
-    });
-    error = res.error;
-  }
+  const payload = { description: desc, amount: amt, date: date, category_id: cat };
+  if (currentEditId) await client.from("transactions").update(payload).eq("id", currentEditId);
+  else await client.from("transactions").insert({ ...payload, user_id: session.user.id });
 
-  if (error) alert("Error: " + error.message);
-  else {
-    closeModal();
-    fetchTransactions();
-  }
+  closeModal();
+  fetchTransactions();
 }
 
-// --- NEW: PDF TEXT EXTRACTION ---
 async function extractTextFromPDF(file) {
   try {
-    const arrayBuffer = await file.arrayBuffer();
-    const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
-    let fullText = "";
+    const ab = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument(ab).promise;
+    let txt = "";
     for (let i = 1; i <= pdf.numPages; i++) {
-      const page = await pdf.getPage(i);
-      const textContent = await page.getTextContent();
-      fullText += `--- PAGE ${i} ---\n` + textContent.items.map((item) => item.str).join(" ") + "\n";
+      const p = await pdf.getPage(i);
+      const c = await p.getTextContent();
+      txt += c.items.map((s) => s.str).join(" ") + "\n";
     }
-    return fullText;
+    return txt;
   } catch (e) {
-    console.error("PDF Extraction failed:", e);
     return null;
   }
 }
 
-// --- HYBRID UPLOAD LOGIC ---
-const triggerBtn = document.getElementById("trigger-upload-btn");
-const fileInput = document.getElementById("file-input");
-
-if (triggerBtn && fileInput) {
-  triggerBtn.onclick = () => fileInput.click();
-  fileInput.onchange = async () => {
-    const file = fileInput.files[0];
-    if (!file) return;
-
-    const status = document.getElementById("status");
+const trigger = document.getElementById("trigger-upload-btn");
+const input = document.getElementById("file-input");
+if (trigger && input) {
+  trigger.onclick = () => input.click();
+  input.onchange = async () => {
+    const f = input.files[0];
+    if (!f) return;
+    const st = document.getElementById("status");
     const {
       data: { session },
     } = await client.auth.getSession();
 
-    status.innerHTML = 'READING DOCUMENT... <div class="loader"></div>';
+    st.innerHTML = "Reading PDF...";
+    const txt = await extractTextFromPDF(f);
+    const fd = new FormData();
+    if (txt && txt.length > 50) fd.append("text", txt);
+    else fd.append("file", f);
+    fd.append("filename", f.name);
 
-    // 1. Try Local Extraction (Fast)
-    const rawText = await extractTextFromPDF(file);
-
-    const formData = new FormData();
-    if (rawText && rawText.length > 50) {
-      console.log("Mode: Raw Text (Fast)");
-      formData.append("text", rawText);
-      formData.append("filename", file.name);
-    } else {
-      console.log("Mode: OCR (Slow)");
-      formData.append("file", file);
-    }
-
+    st.innerHTML = "Analyzing...";
     try {
-      status.innerHTML = 'ANALYZING... <div class="loader"></div>';
-      const response = await fetch("/api/upload", {
+      const res = await fetch("/api/upload", {
         method: "POST",
         headers: { Authorization: `Bearer ${session.access_token}` },
-        body: formData,
+        body: fd,
       });
-      if (!response.ok) throw new Error(await response.text());
+      if (!res.ok) throw new Error(await res.text());
       await fetchTransactions();
-      status.innerText = ">> UPLOAD COMPLETE";
-      fileInput.value = "";
-    } catch (error) {
-      status.innerText = "ERROR: " + error.message;
+      st.innerHTML = "Done";
+      input.value = "";
+    } catch (e) {
+      st.innerHTML = "Error: " + e.message;
     }
   };
 }
 
-document.getElementById("email")?.addEventListener("keypress", (e) => {
-  if (e.key === "Enter") document.getElementById("login-btn").click();
-});
-document.getElementById("password")?.addEventListener("keypress", (e) => {
-  if (e.key === "Enter") document.getElementById("login-btn").click();
-});
+document.getElementById("login-btn").onclick = async () => {
+  const e = document.getElementById("email").value;
+  const p = document.getElementById("password").value;
+  const { error } = await client.auth.signInWithPassword({ email: e, password: p });
+  if (error) document.getElementById("msg").innerText = error.message;
+  else checkUser();
+};
+document.getElementById("signup-btn").onclick = async () => {
+  const e = document.getElementById("email").value;
+  const p = document.getElementById("password").value;
+  const { error } = await client.auth.signUp({ email: e, password: p });
+  if (error) document.getElementById("msg").innerText = error.message;
+  else alert("Account created! Check your email to confirm.");
+};
 
-const loginBtn = document.getElementById("login-btn");
-if (loginBtn)
-  loginBtn.onclick = async () => {
-    const { error } = await client.auth.signInWithPassword({
-      email: document.getElementById("email").value,
-      password: document.getElementById("password").value,
-    });
-    if (error) document.getElementById("msg").innerText = error.message;
-    else checkUser();
-  };
 document.getElementById("logout-btn").onclick = async () => {
   await client.auth.signOut();
   updateUI(null);
 };
-
-const signupBtn = document.getElementById("signup-btn");
-if (signupBtn) {
-  signupBtn.onclick = async () => {
-    const email = document.getElementById("email").value;
-    const password = document.getElementById("password").value;
-    const { error } = await client.auth.signUp({ email, password });
-    if (error) {
-      document.getElementById("msg").innerText = error.message;
-    } else {
-      alert("Account created! Check your email to confirm.");
-    }
-  };
-}
 
 async function checkUser() {
   const {
@@ -347,11 +287,11 @@ async function checkUser() {
   updateUI(session);
   if (session) fetchTransactions();
 }
-function updateUI(session) {
-  if (session) {
+function updateUI(s) {
+  if (s) {
     document.getElementById("auth-section").classList.add("hidden");
     document.getElementById("app-section").classList.remove("hidden");
-    document.getElementById("user-email").innerText = `USER: ${session.user.email.toUpperCase()}`;
+    document.getElementById("user-email").innerText = s.user.email;
   } else {
     document.getElementById("auth-section").classList.remove("hidden");
     document.getElementById("app-section").classList.add("hidden");
