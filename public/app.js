@@ -326,6 +326,20 @@ document.getElementById("logout-btn").onclick = async () => {
   updateUI(null);
 };
 
+const signupBtn = document.getElementById("signup-btn");
+if (signupBtn) {
+  signupBtn.onclick = async () => {
+    const email = document.getElementById("email").value;
+    const password = document.getElementById("password").value;
+    const { error } = await client.auth.signUp({ email, password });
+    if (error) {
+      document.getElementById("msg").innerText = error.message;
+    } else {
+      alert("Account created! Check your email to confirm.");
+    }
+  };
+}
+
 async function checkUser() {
   const {
     data: { session },
