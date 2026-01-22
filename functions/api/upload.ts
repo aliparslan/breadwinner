@@ -61,12 +61,20 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
       result = await model.generateContent([prompt, { inlineData: { data: base64Data, mimeType: file.type } }]);
     }
 
-    const jsonText = result.response
-      .text()
-      .replace(/```json/g, "")
-      .replace(/```/g, "")
-      .trim();
-    const parsedTransactions = JSON.parse(jsonText);
+    const rawOutput = result.response.text();
+
+    // Safer JSON extraction: Find the first '[' and last ']'
+    const jsonMatch = rawOutput.match(/\[.*\]/s);
+    if (!jsonMatch) {
+      return new Response("AI failed to generate valid JSON", { status: 422 });
+    }
+
+    let parsedTransactions;
+    try {
+      parsedTransactions = JSON.parse(jsonMatch[0]);
+    } catch (e) {
+      return new Response("JSON Parse Error: " + rawOutput, { status: 422 });
+    }
 
     const { data: statement, error: stmtError } = await supabase
       .from("statement_logs")

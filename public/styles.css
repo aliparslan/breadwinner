@@ -25,6 +25,16 @@
 .hidden {
   display: none !important;
 }
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+}
 
 body {
   font-family: "Outfit", sans-serif;
@@ -34,6 +44,34 @@ body {
   padding: 0;
   -webkit-font-smoothing: antialiased;
   overscroll-behavior-y: none;
+}
+
+/* LOADING OVERLAY */
+#loading-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: var(--bg-body);
+  z-index: 9999;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transition: opacity 0.3s ease;
+}
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #d7ccc8;
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 #app-container {
@@ -78,6 +116,7 @@ body {
   margin: 16px 0 6px 0;
   display: block;
   text-align: left;
+  cursor: pointer;
 }
 .subtitle {
   color: var(--text-secondary);
@@ -122,7 +161,7 @@ input[type="number"] {
   -moz-appearance: textfield;
 }
 
-/* Input Group (Dollar Sign) */
+/* Input Group */
 .input-group {
   position: relative;
   width: 100%;
@@ -151,6 +190,7 @@ button {
   user-select: none;
   font-family: "Outfit", sans-serif;
   transition: transform 0.05s ease-out, background-color 0.1s ease-out;
+  min-height: 44px; /* A11y Minimum Hit Area */
 }
 button:active {
   transform: scale(0.97);
@@ -177,7 +217,7 @@ button.secondary:hover {
   border: 1px solid #d7ccc8;
 }
 
-/* --- TOGGLE BUTTONS (FIXED COLORS) --- */
+/* --- TOGGLE BUTTONS --- */
 .type-toggle-container {
   display: flex;
   background: #f5f5f4;
@@ -195,20 +235,18 @@ button.secondary:hover {
   border-radius: 10px;
   margin: 0;
   box-shadow: none;
-  transition: all 0.2s ease; /* Smooth color transition */
+  transition: all 0.2s ease;
 }
 .type-btn.active {
   background: white;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
   font-weight: 700;
 }
-
-/* NEW: Specific colors for active states */
 #type-income.active {
-  color: var(--accent-green); /* Income turns Green */
+  color: var(--accent-green);
 }
 #type-expense.active {
-  color: var(--primary); /* Expense stays Cocoa (or use --accent-red) */
+  color: var(--primary);
 }
 
 /* --- HEADER --- */
@@ -245,6 +283,7 @@ button.secondary:hover {
 .logout-btn {
   padding: 8px 14px;
   font-size: 0.8rem;
+  min-height: auto;
 }
 
 /* --- CARDS --- */
@@ -270,11 +309,11 @@ button.secondary:hover {
   margin-bottom: 6px;
 }
 .card p {
-  font-size: 1.5rem;
+  /* Fluid Typography for handling large numbers */
+  font-size: clamp(1.2rem, 3vw, 1.5rem);
   font-weight: 800;
   margin: 0;
   color: var(--primary);
-  /* Ensure big numbers don't break layout */
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -283,7 +322,7 @@ button.secondary:hover {
   color: var(--accent-green) !important;
 }
 .negative {
-  color: var(--text-main); /* Default for negative */
+  color: var(--text-main);
 }
 
 /* --- SECTIONS --- */
@@ -367,17 +406,26 @@ button.secondary:hover {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
 }
 .month-header {
+  width: 100%;
   font-size: 0.85rem;
   font-weight: 700;
+  font-family: inherit;
   color: var(--text-secondary);
   text-transform: uppercase;
   padding: 12px 20px;
   background: #f5f5f4;
+  border: none;
   border-bottom: 1px solid var(--border);
   display: flex;
   justify-content: space-between;
   cursor: pointer;
+  text-align: left;
 }
+.month-header:focus {
+  outline: 2px solid var(--primary);
+  outline-offset: -2px;
+}
+
 table {
   width: 100%;
   border-collapse: collapse;
@@ -408,7 +456,9 @@ td {
   padding: 14px 20px;
   vertical-align: middle;
 }
+
 td:nth-child(1) {
+  /* Date */
   color: var(--text-muted);
   font-size: 0.85rem;
   font-weight: 600;
@@ -416,12 +466,14 @@ td:nth-child(1) {
   white-space: nowrap;
 }
 td:nth-child(2) {
+  /* Desc */
   color: var(--text-main);
   font-weight: 600;
   font-size: 0.95rem;
   width: 38%;
 }
 td:nth-child(3) {
+  /* Cat */
   width: 20%;
 }
 td:nth-child(3) span {
@@ -438,18 +490,17 @@ td:nth-child(3) span {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-
-/* FIX: Amount Column - Prevent Wrapping */
 td:nth-child(4) {
+  /* Amt */
   text-align: right;
   font-weight: 700;
   font-size: 1rem;
   width: 15%;
   font-feature-settings: "tnum";
-  white-space: nowrap; /* Forces -$100.00 to stay on one line */
+  white-space: nowrap;
 }
-
 td:nth-child(5) {
+  /* Actions */
   text-align: right;
   width: 15%;
 }
@@ -472,10 +523,24 @@ tr:hover .actions {
   color: var(--text-secondary);
   border-radius: 8px;
   font-weight: 600;
+  min-height: 32px;
 }
 .btn-action:hover {
   border-color: var(--primary);
   color: var(--primary);
+}
+
+/* EMPTY STATE */
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--text-muted);
+}
+.empty-icon {
+  font-size: 3rem;
+  margin-bottom: 10px;
+  opacity: 0.5;
+  display: block;
 }
 
 /* --- MODAL --- */
@@ -494,7 +559,6 @@ tr:hover .actions {
   padding: 20px;
   box-sizing: border-box;
 }
-
 .modal {
   background: var(--bg-card);
   padding: 24px;
@@ -506,7 +570,6 @@ tr:hover .actions {
   max-height: 90vh;
   overflow-y: auto;
 }
-
 .modal-actions {
   display: flex;
   gap: 12px;
@@ -654,7 +717,6 @@ tr:hover .actions {
     border: none;
     padding: 0;
   }
-
   td:nth-child(2) {
     grid-area: desc;
     font-size: 1rem;
@@ -662,8 +724,6 @@ tr:hover .actions {
     margin-bottom: 2px;
     width: auto;
   }
-
-  /* FIX: Mobile Amount - Prevent Wrapping */
   td:nth-child(4) {
     grid-area: amount;
     justify-self: end;
@@ -672,9 +732,8 @@ tr:hover .actions {
     font-weight: 800;
     color: var(--primary);
     width: auto;
-    white-space: nowrap; /* Crucial fix here too */
+    white-space: nowrap;
   }
-
   td:nth-child(1) {
     grid-area: date;
     font-size: 0.8rem;
@@ -699,7 +758,6 @@ tr:hover .actions {
     flex-direction: row;
     gap: 12px;
   }
-
   .btn-action {
     padding: 6px 0;
     font-size: 0.85rem;
@@ -710,6 +768,7 @@ tr:hover .actions {
     letter-spacing: 0.05em;
     font-weight: 700;
     box-shadow: none;
+    min-height: 44px; /* Ensure mobile tap target is large */
   }
   .btn-action:hover {
     background: transparent;

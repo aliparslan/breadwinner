@@ -10,22 +10,23 @@ const toastText = document.getElementById("status-text");
 let toastTimer;
 
 function showToast(msg, type = "loading") {
-  // Types: 'loading', 'success', 'error'
   if (!toastText || !toastEl) return;
-
   toastText.innerText = msg;
-  // Remove old classes and add new ones
   toastEl.className = "";
   toastEl.classList.add(type, "show");
-
-  clearTimeout(toastTimer); // Reset hide timer
-
+  clearTimeout(toastTimer);
   if (type !== "loading") {
-    // Auto-hide after 3 seconds if not loading
     toastTimer = setTimeout(() => {
       toastEl.classList.remove("show");
     }, 3000);
   }
+}
+
+// --- HELPER: LOADING OVERLAY ---
+function toggleAppLoading(show) {
+  const overlay = document.getElementById("loading-overlay");
+  if (show) overlay.classList.remove("hidden");
+  else overlay.classList.add("hidden");
 }
 
 // --- HELPER: FORMATTING ---
@@ -37,13 +38,11 @@ function formatCurrency(amount) {
 }
 
 function formatDate(dateString) {
-  // Fix for timezone offset issues: treat YYYY-MM-DD as local
   const [y, m, d] = dateString.split("-");
   const date = new Date(y, m - 1, d);
   return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
-// --- HELPER: DEBOUNCE (For snappy search) ---
 function debounce(func, wait) {
   let timeout;
   return function (...args) {
@@ -61,7 +60,6 @@ async function fetchTransactions() {
   allCategories = cats || [];
 
   const filterSelect = document.getElementById("filter-category");
-  // Preserve current selection if refreshing
   const currentVal = filterSelect.value;
 
   filterSelect.innerHTML =
@@ -103,7 +101,6 @@ function applyFilters() {
   renderDashboard(filtered);
 }
 
-// Attach listeners
 document.getElementById("filter-search").addEventListener("input", debounce(applyFilters, 300));
 document.getElementById("filter-category").addEventListener("change", applyFilters);
 
@@ -112,7 +109,6 @@ function renderDashboard(transactions) {
   let expense = 0;
   const catTotals = {};
 
-  // 1. Calculate Totals
   transactions.forEach((tx) => {
     const amt = parseFloat(tx.amount);
     if (amt > 0) income += amt;
@@ -128,9 +124,9 @@ function renderDashboard(transactions) {
   const net = income + expense;
   const sumNet = document.getElementById("sum-net");
   sumNet.innerText = formatCurrency(net);
-  sumNet.className = net >= 0 ? "positive" : "negative"; // This might need a CSS class for 'negative' if not exists, default color is fine.
+  sumNet.className = net >= 0 ? "positive" : "negative";
 
-  // 2. Render Categories (Optimized)
+  // Categories
   const catContainer = document.getElementById("category-list");
   const sorted = Object.entries(catTotals).sort((a, b) => b[1] - a[1]);
   const max = sorted.length > 0 ? sorted[0][1] : 1;
@@ -166,7 +162,7 @@ function renderDashboard(transactions) {
     })
     .join("");
 
-  // 3. Render Table (Optimized)
+  // Table
   const container = document.getElementById("tx-table-container");
   const grouped = {};
 
@@ -179,10 +175,15 @@ function renderDashboard(transactions) {
   });
 
   if (Object.keys(grouped).length === 0) {
-    container.innerHTML = `<div style="text-align:center; padding: 20px; color: var(--text-muted);">No transactions found.</div>`;
+    container.innerHTML = `
+      <div class="empty-state">
+        <span class="empty-icon">📭</span>
+        <p>No transactions found.</p>
+      </div>`;
     return;
   }
 
+  // A11y Fix: Changed div.month-header to button
   container.innerHTML = Object.entries(grouped)
     .map(([month, txs]) => {
       const total = txs.reduce((s, t) => s + parseFloat(t.amount), 0);
@@ -190,12 +191,12 @@ function renderDashboard(transactions) {
 
       return `
       <div class="month-group">
-        <div class="month-header" onclick="toggleMonth(this)">
+        <button class="month-header" onclick="toggleMonth(this)" aria-expanded="true">
           <span>${month}</span>
           <span style="color: ${total >= 0 ? "var(--accent-green)" : "var(--text-main)"}">
             ${formatCurrency(total)}
           </span>
-        </div>
+        </button>
         <div class="month-content">
           <table>
              <thead><tr><th>Date</th><th>Description</th><th>Category</th><th>Amount</th><th>Action</th></tr></thead>
@@ -210,7 +211,6 @@ function renderDashboard(transactions) {
 function renderRow(tx) {
   const isNeg = tx.amount < 0;
   const desc = tx.description.length > 40 ? tx.description.substring(0, 38) + "..." : tx.description;
-  // NOTE: On mobile, CSS transforms this row into a card.
   return `
     <tr>
       <td>${formatDate(tx.date)}</td>
@@ -219,39 +219,56 @@ function renderRow(tx) {
       <td style="color:${isNeg ? "var(--text-main)" : "var(--accent-green)"}">${formatCurrency(tx.amount)}</td>
       <td>
         <div class="actions">
-          <button class="btn-action btn-edit" onclick="openEdit(${tx.id})">Edit</button>
-          <button class="btn-action btn-del" onclick="deleteTx(${tx.id})">Del</button>
+          <button class="btn-action btn-edit" onclick="openEdit(${tx.id})" aria-label="Edit transaction">Edit</button>
+          <button class="btn-action btn-del" onclick="initiateDelete(${
+            tx.id
+          })" aria-label="Delete transaction">Del</button>
         </div>
       </td>
     </tr>`;
 }
 
-function toggleMonth(el) {
-  // Requires CSS: .collapsed { display: none; } or similar logic for the next sibling
-  // Since original CSS didn't have .collapsed class explicitly defined for content,
-  // we toggle the 'hidden' class on the month-content div.
-  const content = el.nextElementSibling;
-  content.classList.toggle("hidden");
+function toggleMonth(btn) {
+  const content = btn.nextElementSibling;
+  const isHidden = content.classList.toggle("hidden");
+  btn.setAttribute("aria-expanded", !isHidden);
 }
 
-// --- OPTIMISTIC DELETE ---
-async function deleteTx(id) {
-  if (!confirm("Delete transaction?")) return;
+// --- CONFIRMATION MODAL LOGIC ---
+let pendingDeleteId = null;
 
-  // 1. Snapshot for rollback
+function initiateDelete(id) {
+  pendingDeleteId = id;
+  const modal = document.getElementById("confirm-modal");
+  modal.classList.remove("hidden");
+
+  // Set up the Yes button specifically for this action
+  const yesBtn = document.getElementById("confirm-yes-btn");
+  yesBtn.onclick = () => {
+    confirmDelete();
+    closeConfirm();
+  };
+}
+
+function closeConfirm() {
+  document.getElementById("confirm-modal").classList.add("hidden");
+  pendingDeleteId = null;
+}
+
+async function confirmDelete() {
+  if (!pendingDeleteId) return;
+  const id = pendingDeleteId;
+
+  // Optimistic Delete
   const originalTxs = [...allTransactions];
-
-  // 2. UI Update (Instant)
   allTransactions = allTransactions.filter((t) => t.id !== id);
   applyFilters();
   showToast("Transaction deleted", "success");
 
-  // 3. Database Update
   const { error } = await client.from("transactions").delete().eq("id", id);
-
   if (error) {
     console.error("Delete failed", error);
-    allTransactions = originalTxs; // Revert
+    allTransactions = originalTxs;
     applyFilters();
     showToast("Failed to delete", "error");
   }
@@ -261,11 +278,12 @@ async function deleteTx(id) {
 let currentEditId = null;
 let currentTxType = "expense";
 
-// Modal Click Outside Listener
 document.getElementById("edit-modal").addEventListener("click", (e) => {
-  if (e.target === e.currentTarget) {
-    closeModal();
-  }
+  if (e.target === e.currentTarget) closeModal();
+});
+
+document.getElementById("confirm-modal").addEventListener("click", (e) => {
+  if (e.target === e.currentTarget) closeConfirm();
 });
 
 function setTxType(type) {
@@ -280,24 +298,21 @@ function openAddModal() {
   document.getElementById("edit-desc").value = "";
   document.getElementById("edit-amount").value = "";
   document.getElementById("edit-date").value = new Date().toISOString().split("T")[0];
-
   setTxType("expense");
   renderCats();
   document.getElementById("edit-modal").classList.remove("hidden");
+  document.getElementById("edit-amount").focus();
 }
 
 function openEdit(id) {
   const tx = allTransactions.find((t) => t.id == id);
   if (!tx) return;
-
   currentEditId = id;
   document.getElementById("modal-title").innerText = "Edit Transaction";
   document.getElementById("edit-desc").value = tx.description;
-
   const rawAmt = parseFloat(tx.amount);
   document.getElementById("edit-amount").value = Math.abs(rawAmt).toFixed(2);
   setTxType(rawAmt >= 0 ? "income" : "expense");
-
   document.getElementById("edit-date").value = tx.date;
   renderCats(tx.category_id);
   document.getElementById("edit-modal").classList.remove("hidden");
@@ -322,12 +337,14 @@ async function saveEdit() {
     data: { session },
   } = await client.auth.getSession();
 
-  if (!rawAmt) return alert("Please enter an amount");
+  if (!rawAmt) {
+    showToast("Please enter an amount", "error");
+    return;
+  }
 
   const finalAmt = currentTxType === "expense" ? -Math.abs(rawAmt) : Math.abs(rawAmt);
   const payload = { description: desc, amount: finalAmt, date: date, category_id: cat };
 
-  // Optimistic UI: Close modal immediately and show status
   closeModal();
   showToast("Saving...", "loading");
 
@@ -343,7 +360,6 @@ async function saveEdit() {
   if (error) {
     console.error(error);
     showToast("Error saving", "error");
-    // Optionally re-open modal here
   } else {
     await fetchTransactions();
     showToast("Saved successfully", "success");
@@ -375,7 +391,6 @@ if (trigger && input) {
   input.onchange = async () => {
     const f = input.files[0];
     if (!f) return;
-
     showToast("Reading PDF...", "loading");
 
     const {
@@ -417,30 +432,41 @@ document.getElementById("password")?.addEventListener("keypress", handleLoginEnt
 document.getElementById("login-btn").onclick = async () => {
   const e = document.getElementById("email").value;
   const p = document.getElementById("password").value;
+  toggleAppLoading(true);
   const { error } = await client.auth.signInWithPassword({ email: e, password: p });
-  if (error) document.getElementById("msg").innerText = error.message;
-  else checkUser();
+  if (error) {
+    document.getElementById("msg").innerText = error.message;
+    toggleAppLoading(false);
+  } else {
+    checkUser();
+  }
 };
 
 document.getElementById("signup-btn").onclick = async () => {
   const e = document.getElementById("email").value;
   const p = document.getElementById("password").value;
+  toggleAppLoading(true);
   const { error } = await client.auth.signUp({ email: e, password: p });
+  toggleAppLoading(false);
   if (error) document.getElementById("msg").innerText = error.message;
   else alert("Check your email for the confirmation link.");
 };
 
 document.getElementById("logout-btn").onclick = async () => {
+  toggleAppLoading(true);
   await client.auth.signOut();
   updateUI(null);
+  toggleAppLoading(false);
 };
 
 async function checkUser() {
+  toggleAppLoading(true);
   const {
     data: { session },
   } = await client.auth.getSession();
   updateUI(session);
-  if (session) fetchTransactions();
+  if (session) await fetchTransactions();
+  toggleAppLoading(false);
 }
 
 function updateUI(s) {
