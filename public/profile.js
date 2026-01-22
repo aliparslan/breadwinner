@@ -44,6 +44,8 @@ async function init() {
 
   if (profile) {
     document.getElementById("profile-email").value = profile.email || session.user.email;
+    const emailDisplay = document.getElementById("profile-email-display");
+    if(emailDisplay) emailDisplay.innerText = session.user.email;
     // We do NOT show the full key for security, just a placeholder if it exists
     if (profile.gemini_api_key) {
       document.getElementById("api-key").value = profile.gemini_api_key;

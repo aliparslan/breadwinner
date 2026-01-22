@@ -16,9 +16,14 @@
       <div class="dashboard-header">
         <div class="dash-brand">
           <a href="/" style="text-decoration: none; color: inherit; display: flex; align-items: center; gap: 10px">
-            <span class="bread-icon">⬅️</span>
-            <span class="dash-title">Settings</span>
+            <span class="bread-icon">🍞</span>
+            <span class="dash-title">Breadwinner</span>
           </a>
+        </div>
+        <div class="user-controls">
+           <!-- Using same ID as index for consistency if we want to show email -->
+           <span id="profile-email-display" class="desktop-only" style="color: var(--text-secondary); font-size: 0.85rem; font-weight: 600;"></span>
+           <button class="secondary logout-btn" onclick="client.auth.signOut().then(() => window.location.href = '/')">Log Out</button>
         </div>
       </div>
 

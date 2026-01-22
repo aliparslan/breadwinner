@@ -104,7 +104,176 @@ function applyFilters() {
 document.getElementById("filter-search").addEventListener("input", debounce(applyFilters, 300));
 document.getElementById("filter-category").addEventListener("change", applyFilters);
 
+// --- MONTHLY VIZ LOGIC ---
+function renderMonthlyViz(transactions) {
+  const container = document.getElementById("monthly-viz");
+  if (!container) return;
+
+  // 1. Filter Expenses Only & Sort by Date Descending
+  const expenses = transactions
+    .filter((t) => parseFloat(t.amount) < 0)
+    .sort((a, b) => new Date(b.date) - new Date(a.date));
+
+  if (expenses.length === 0) {
+    container.classList.add("hidden");
+    return;
+  }
+
+  // 2. Group by Month (YYYY-MM)
+  const months = {};
+  expenses.forEach((t) => {
+    const key = t.date.substring(0, 7); // "2023-10"
+    if (!months[key]) months[key] = [];
+    months[key].push(t);
+  });
+
+  const sortedMonthKeys = Object.keys(months).sort().reverse(); // ["2023-10", "2023-09"]
+  const currentKey = sortedMonthKeys[0];
+  const prevKey = sortedMonthKeys[1]; // Might be undefined
+
+  // 3. Current Month Stats
+  const currentTxs = months[currentKey];
+  const currentTotal = currentTxs.reduce((sum, t) => sum + Math.abs(parseFloat(t.amount)), 0);
+
+  // 4. Previous Month Stats (for delta)
+  let prevTotal = 0;
+  let prevCatTotals = {};
+  if (prevKey) {
+    const prevTxs = months[prevKey];
+    prevTotal = prevTxs.reduce((sum, t) => sum + Math.abs(parseFloat(t.amount)), 0);
+    prevTxs.forEach((t) => {
+      prevCatTotals[t.categoryName] = (prevCatTotals[t.categoryName] || 0) + Math.abs(parseFloat(t.amount));
+    });
+  }
+
+  // 5. Total Delta
+  let totalDeltaPct = 0;
+  if (prevTotal > 0) {
+    totalDeltaPct = ((currentTotal - prevTotal) / prevTotal) * 100;
+  }
+
+  // 6. Category Breakdown for Current Month
+  const currentCatTotals = {};
+  currentTxs.forEach((t) => {
+    currentCatTotals[t.categoryName] = (currentCatTotals[t.categoryName] || 0) + Math.abs(parseFloat(t.amount));
+  });
+
+  // Prepare Array for sorting
+  let catStats = Object.keys(currentCatTotals).map((name) => {
+    const amt = currentCatTotals[name];
+    const prevAmt = prevCatTotals[name] || 0;
+    let deltaPct = 0;
+    if (prevAmt > 0) deltaPct = ((amt - prevAmt) / prevAmt) * 100;
+    
+    return {
+      name,
+      amount: amt,
+      pctOfTotal: (amt / currentTotal) * 100,
+      delta: deltaPct,
+      prevAmount: prevAmt
+    };
+  });
+
+  // Sort by Amount Descending
+  catStats.sort((a, b) => b.amount - a.amount);
+
+  // Colors for visualization (Cocoa/Pastel Theme)
+  const colors = [
+    "#4a3b32", // Deep Espresso
+    "#9e644b", // Terra Cotta
+    "#7c866b", // Sage Green
+    "#a99282", // Clay
+    "#6e5b53", // Taupe
+    "#c3b091", // Sand
+    "#57534e", // Stone
+    "#8c6e63", // Cocoa
+  ];
+
+  // 7. Generate HTML
+  // Current Month Name
+  const [y, m] = currentKey.split("-");
+  const monthName = new Date(parseInt(y), parseInt(m) - 1).toLocaleString("default", { month: "long" });
+
+  const totalDeltaHtml = prevKey
+    ? `<span class="viz-trend ${totalDeltaPct > 0 ? "up" : "down"}">
+         ${totalDeltaPct > 0 ? "▲" : "▼"} ${Math.abs(totalDeltaPct).toFixed(1)}%
+       </span>`
+    : `<span class="viz-trend" style="color:var(--text-muted)">New</span>`;
+
+  // Bars HTML: Show Top 6 for visual clarity
+  const barsHtml = catStats
+    .slice(0, 6)
+    .map((c, i) => {
+      const color = colors[i % colors.length];
+      return `<div class="viz-segment" style="width: ${c.pctOfTotal}%; background: ${color}" title="${c.name}"></div>`;
+    })
+    .join("");
+
+  // Legend/Grid HTML: Show ALL categories
+  const legendHtml = catStats
+    .map((c, i) => {
+      // Create a faded color for items beyond the top 6 to show they aren't in the bar? 
+      // Or just cycle colors. Let's cycle.
+      const color = colors[i % colors.length];
+      const arrow = c.delta > 0 ? "▲" : "▼";
+      const deltaStr = c.prevAmount > 0 ? `${arrow} ${Math.abs(c.delta).toFixed(1)}%` : "New";
+      const deltaColor = c.prevAmount > 0 ? (c.delta > 0 ? "var(--accent-red)" : "var(--accent-green)") : "var(--text-muted)";
+
+      // Simple indicator if it's in the bar chart
+      const isHiddenInBar = i >= 6;
+      const pillStyle = isHiddenInBar ? `background: #e7e5e4` : `background: ${color}`;
+
+      return `
+        <div class="viz-item">
+          <div class="viz-color-pill" style="${pillStyle}"></div>
+          <div class="viz-info">
+            <div class="viz-row-top">
+              <span class="viz-cat-name">${c.name}</span>
+              <span class="viz-cat-pct">${c.pctOfTotal.toFixed(1)}%</span>
+            </div>
+            <div class="viz-row-bot">
+              <span class="viz-cat-amt">${formatCurrency(c.amount)}</span>
+              <span class="viz-cat-change" style="color: ${deltaColor}">${deltaStr}</span>
+            </div>
+          </div>
+        </div>
+      `;
+    })
+    .join("");
+
+  const html = `
+    <div class="viz-card">
+      <div class="viz-header">
+        <div class="viz-month-selector">
+          <span class="viz-month active">${monthName}</span>
+        </div>
+        <div class="viz-total-section">
+          <span class="viz-label">Total Spent</span>
+          <div class="viz-big-number">${formatCurrency(currentTotal)}</div>
+          ${totalDeltaHtml}
+        </div>
+      </div>
+
+      <div class="viz-bar-container">
+        ${barsHtml}
+        <div class="viz-segment" style="flex:1; background: #e7e5e4;" title="Other"></div>
+      </div>
+
+      <div class="viz-legend">
+        ${legendHtml}
+      </div>
+    </div>
+  `;
+
+  container.innerHTML = html;
+  container.classList.remove("hidden");
+}
+
 function renderDashboard(transactions) {
+  // Always render the monthly viz using global data (most recent month)
+  // regardless of the current search results
+  renderMonthlyViz(allTransactions);
+
   let income = 0;
   let expense = 0;
   const catTotals = {};
@@ -120,47 +289,11 @@ function renderDashboard(transactions) {
   });
 
   document.getElementById("sum-income").innerText = formatCurrency(income);
-  document.getElementById("sum-expense").innerText = formatCurrency(expense);
+  document.getElementById("sum-expense").innerText = formatCurrency(Math.abs(expense));
   const net = income + expense;
   const sumNet = document.getElementById("sum-net");
-  sumNet.innerText = formatCurrency(net);
+  sumNet.innerText = formatCurrency(Math.abs(net)); // Display Positive
   sumNet.className = net >= 0 ? "positive" : "negative";
-
-  // Categories
-  const catContainer = document.getElementById("category-list");
-  const sorted = Object.entries(catTotals).sort((a, b) => b[1] - a[1]);
-  const max = sorted.length > 0 ? sorted[0][1] : 1;
-
-  const getIcon = (n) => {
-    const l = n.toLowerCase();
-    if (l.includes("savings") || l.includes("invest")) return "📈";
-    if (l.includes("debt") || l.includes("loan")) return "💳";
-    if (l.includes("fee") || l.includes("bank")) return "🏦";
-    if (l.includes("food") || l.includes("restaurant")) return "🍔";
-    if (l.includes("tech") || l.includes("software")) return "💻";
-    if (l.includes("transport") || l.includes("gas")) return "⛽️";
-    if (l.includes("home") || l.includes("rent")) return "🏠";
-    if (l.includes("income") || l.includes("paycheck")) return "💰";
-    return "📦";
-  };
-
-  catContainer.innerHTML = sorted
-    .slice(0, 5)
-    .map(([name, total]) => {
-      const pct = (total / max) * 100;
-      return `
-      <div class="cat-item">
-        <div class="cat-icon">${getIcon(name)}</div>
-        <div class="cat-details">
-          <div class="cat-row">
-            <span class="cat-name">${name}</span>
-            <span class="cat-amount">${formatCurrency(total * -1)}</span>
-          </div>
-          <div class="cat-bar-bg"><div class="cat-bar-fill" style="width: ${pct}%;"></div></div>
-        </div>
-      </div>`;
-    })
-    .join("");
 
   // Table
   const container = document.getElementById("tx-table-container");
@@ -194,7 +327,7 @@ function renderDashboard(transactions) {
         <button class="month-header" onclick="toggleMonth(this)" aria-expanded="true">
           <span>${month}</span>
           <span style="color: ${total >= 0 ? "var(--accent-green)" : "var(--text-main)"}">
-            ${formatCurrency(total)}
+            ${formatCurrency(Math.abs(total))}
           </span>
         </button>
         <div class="month-content">
@@ -211,12 +344,13 @@ function renderDashboard(transactions) {
 function renderRow(tx) {
   const isNeg = tx.amount < 0;
   const desc = tx.description.length > 40 ? tx.description.substring(0, 38) + "..." : tx.description;
+  // Always positive amount
   return `
     <tr>
       <td>${formatDate(tx.date)}</td>
       <td>${desc}</td>
       <td><span>${tx.categoryName}</span></td>
-      <td style="color:${isNeg ? "var(--text-main)" : "var(--accent-green)"}">${formatCurrency(tx.amount)}</td>
+      <td style="color:${isNeg ? "var(--text-main)" : "var(--accent-green)"}">${formatCurrency(Math.abs(tx.amount))}</td>
       <td>
         <div class="actions">
           <button class="btn-action btn-edit" onclick="openEdit(${tx.id})" aria-label="Edit transaction">Edit</button>
