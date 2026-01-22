@@ -780,3 +780,149 @@ tr:hover .actions {
     opacity: 0.8;
   }
 }
+
+/* Settings Icon Button */
+.icon-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  color: var(--text-muted);
+  transition: all 0.2s;
+  background: transparent;
+  border: 1px solid transparent;
+}
+.icon-btn:hover {
+  background: white;
+  color: var(--primary);
+  border-color: var(--border);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+}
+
+/* Helper to hide email on mobile */
+.desktop-only {
+  display: inline-block;
+  margin-right: 10px;
+}
+@media screen and (max-width: 600px) {
+  .desktop-only {
+    display: none;
+  }
+}
+
+/* --- SEGMENTED VISUALIZATION --- */
+.spending-viz-container {
+  margin-bottom: 40px;
+}
+
+/* The thick bar */
+.segmented-bar {
+  display: flex;
+  width: 100%;
+  height: 32px;
+  background-color: #e7e5e4; /* Empty track color */
+  border-radius: 12px;
+  overflow: hidden;
+  margin-bottom: 24px;
+}
+.segment {
+  height: 100%;
+  transition: width 0.5s ease-out;
+  border-right: 2px solid var(--bg-card); /* Tiny separator */
+}
+.segment:last-child {
+  border-right: none;
+}
+
+/* The Grid Below */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr); /* 2 Columns like the image */
+  gap: 16px;
+}
+.stat-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 8px;
+  border-radius: 12px;
+  background: rgba(245, 245, 244, 0.5); /* Subtle backing */
+}
+
+/* The color indicator line */
+.stat-indicator {
+  width: 4px;
+  height: 36px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.stat-content {
+  flex: 1;
+}
+
+/* Top Row: Name and Percentage */
+.stat-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+.stat-name {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 90px;
+}
+.stat-pct {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+/* Bottom Row: Amount and Delta */
+.stat-details {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+.stat-amount {
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--text-main);
+  letter-spacing: -0.02em;
+}
+.stat-delta {
+  font-size: 0.75rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.delta-up {
+  color: var(--accent-red);
+} /* Spending went UP (Bad?) or just high volume */
+.delta-down {
+  color: var(--accent-green);
+} /* Spending went DOWN (Good) */
+.delta-flat {
+  color: var(--text-muted);
+}
+
+/* Mobile Adjustment */
+@media screen and (max-width: 600px) {
+  .stats-grid {
+    gap: 10px;
+  }
+  .stat-name {
+    font-size: 0.8rem;
+  }
+  .stat-amount {
+    font-size: 0.95rem;
+  }
+}

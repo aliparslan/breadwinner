@@ -16,11 +16,22 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
       global: { headers: { Authorization: authHeader } },
     });
 
+    // 1. Get User
     const {
       data: { user },
       error: authError,
     } = await supabase.auth.getUser();
     if (authError || !user) return new Response("Invalid User", { status: 401 });
+
+    // 2. Fetch User Profile to check for Custom Key
+    const { data: profile } = await supabase.from("profiles").select("gemini_api_key").eq("id", user.id).single();
+
+    // 3. Determine which key to use (User's Key > System Env Key)
+    const activeApiKey = profile?.gemini_api_key || env.GEMINI_API_KEY;
+
+    if (!activeApiKey) {
+      return new Response("No AI API Key configured. Please add one in Settings.", { status: 500 });
+    }
 
     const formData = await request.formData();
     const file = formData.get("file") as File | null;
@@ -33,8 +44,8 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
     if (!categories) return new Response("Could not fetch categories", { status: 500 });
     const categoryNames = categories.map((c) => c.name).join(", ");
 
-    // Using Gemini 2.5 Flash Lite
-    const genAI = new GoogleGenerativeAI(env.GEMINI_API_KEY);
+    // Initialize Gemini with the ACTIVE KEY
+    const genAI = new GoogleGenerativeAI(activeApiKey);
     const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
 
     let result;
@@ -62,12 +73,8 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
     }
 
     const rawOutput = result.response.text();
-
-    // Safer JSON extraction: Find the first '[' and last ']'
     const jsonMatch = rawOutput.match(/\[.*\]/s);
-    if (!jsonMatch) {
-      return new Response("AI failed to generate valid JSON", { status: 422 });
-    }
+    if (!jsonMatch) return new Response("AI failed to generate valid JSON", { status: 422 });
 
     let parsedTransactions;
     try {
