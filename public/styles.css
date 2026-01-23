@@ -106,7 +106,7 @@ input[type="number"]::-webkit-inner-spin-button,
 input[type="number"]::-webkit-outer-spin-button {
   -webkit-appearance: none; appearance: none; margin: 0;
 }
-input[type="number"] { -moz-appearance: textfield; }
+input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
 
 /* Input Group */
 .input-group { position: relative; width: 100%; }
@@ -206,15 +206,28 @@ button.secondary:hover {
 .positive { color: var(--accent-green) !important; }
 .negative { color: var(--text-main); }
 
+/* Summary cards spacing */
+.summary-cards {
+  margin-bottom: 24px;
+}
+
 /* --- SECTIONS --- */
 .section-header {
   display: flex; justify-content: space-between; align-items: center;
-  margin-bottom: 24px; padding-bottom: 0; border: none;
+  margin-bottom: 16px; padding-bottom: 0; border: none;
 }
 .section-header h3 {
-  font-size: 1.2rem; font-weight: 700; color: var(--primary); margin: 0;
+  font-size: 1.1rem; font-weight: 700; color: var(--primary); margin: 0;
 }
-.header-actions { display: flex; gap: 8px; }
+.header-actions { display: flex; gap: 8px; align-items: center; }
+
+/* Overview section spacing */
+.overview-header {
+  margin-bottom: 12px;
+}
+#monthly-viz {
+  margin-top: 8px;
+}
 
 .filter-bar {
   display: flex; gap: 12px; margin-bottom: 20px; align-items: center;
@@ -236,24 +249,43 @@ button.secondary:hover {
   background: white;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
 }
+  /* Transaction Month Header Fix */
 .month-header {
-  width: 100%; font-size: 0.85rem; font-weight: 700;
+  width: 100%; font-size: 0.9rem; font-weight: 800;
   font-family: inherit; color: var(--text-secondary);
-  text-transform: uppercase; padding: 12px 20px;
-  background: #fdfcfb; /* Subtle contrast */
-  border: none; border-bottom: 1px solid var(--border);
-  display: flex; justify-content: space-between; align-items: center;
+  text-transform: uppercase; padding: 14px 16px;
+  background: white; /* Clean background */
+  border: none; border-bottom: 2px solid var(--border);
+  display: flex; align-items: center;
   cursor: pointer; text-align: left;
-  transition: background 0.2s;
+  transition: all 0.2s;
+  letter-spacing: 0.05em;
 }
-.month-header:hover { background: #fafaf9; }
-.month-header:focus { outline: 2px solid var(--primary); outline-offset: -2px; }
+.month-header span:first-child {
+  margin-right: auto; /* Push amount/arrow to right */
+  color: var(--text-muted);
+}
+.month-header span:last-of-type {
+  font-feature-settings: "tnum";
+}
 
 /* Chevron Indicator */
 .month-header::after {
-  content: "▼"; font-size: 0.7rem; color: var(--text-muted);
-  transition: transform 0.2s; margin-left: 10px;
+  content: "";
+  display: inline-block;
+  width: 8px; height: 8px;
+  border-right: 2px solid var(--text-muted);
+  border-bottom: 2px solid var(--text-muted);
+  transform: rotate(45deg); /* Point down */
+  margin-left: 12px;
+  transition: transform 0.2s;
+  margin-bottom: 3px; /* Optical adjustment */
 }
+.month-header[aria-expanded="false"]::after { 
+  transform: rotate(-45deg); /* Point right */
+  margin-bottom: 0;
+} 
+/* Remove old triangle styles if any */
 .month-header[aria-expanded="false"]::after { transform: rotate(-90deg); } /* Collapsed state logic if needed, usually we start expanded */
 /* Using the logic in app.js: app.js toggles 'hidden' on next sibling. It DOES set aria-expanded. */
 .month-header[aria-expanded="true"]::after { transform: rotate(0deg); }
@@ -281,9 +313,16 @@ th:nth-child(4) {
 }
 tr {
   border-bottom: 1px solid #f5f5f4;
+  transition: background-color 0.15s ease;
 }
 tbody tr:nth-child(even) {
   background-color: #fafafa;
+}
+tbody tr:hover {
+  background-color: #f5f0eb;
+}
+tbody tr:active {
+  background-color: #ebe5df;
 }
 td {
   padding: 14px 20px;
@@ -311,22 +350,22 @@ td:nth-child(4) { /* Amt */
 }
 td:nth-child(5) { /* Actions */ text-align: right; width: 10%; }
 
-/* PDF Button Styling */
+/* Upload Button Styling */
 #trigger-upload-btn {
   background: white; border: 2px solid var(--border);
-  color: var(--text-secondary); padding: 10px 18px;
-  display: inline-flex; gap: 8px; align-items: center;
-  border-radius: 8px; min-width: 100px; justify-content: center;
+  color: var(--text-secondary); padding: 8px 14px;
+  display: inline-flex; gap: 6px; align-items: center;
+  border-radius: 8px; justify-content: center;
   transition: all 0.2s;
+  font-size: 0.85rem;
 }
 #trigger-upload-btn:hover {
   border-color: var(--primary); color: var(--primary);
-  /* transform: translateY(-1px); */
   box-shadow: 0 4px 12px rgba(0,0,0,0.05);
   background: white;
 }
-#trigger-upload-btn::before {
-  content: "📄"; font-size: 1rem; line-height: 1;
+#trigger-upload-btn svg {
+  flex-shrink: 0;
 }
 
 /* Visualization Header Alignment */
@@ -375,40 +414,81 @@ tr:hover .actions {
 }
 
 /* --- MODAL --- */
+/* --- MODAL REDESIGN --- */
 .modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  background-color: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(4px);
-  z-index: 1000;
-  padding: 20px;
-  box-sizing: border-box;
+  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  display: flex; justify-content: center; align-items: center;
+  background-color: rgba(0, 0, 0, 0.6); /* Darker overlay */
+  backdrop-filter: blur(5px);
+  z-index: 2000; padding: 20px; box-sizing: border-box;
+  animation: fadeIn 0.2s ease-out;
 }
 .modal {
-  background: var(--bg-card);
-  padding: 24px;
-  border-radius: 24px;
-  width: 90%;
-  max-width: 380px;
-  box-shadow: 0 20px 50px rgba(62, 39, 35, 0.15);
+  background: white;
+  padding: 32px;
+  border-radius: 20px;
+  width: 100%; max-width: 420px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
   position: relative;
-  max-height: 90vh;
-  overflow-y: auto;
+  max-height: 90vh; overflow-y: auto;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transform: translateY(0);
+  animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.modal h3 {
+  font-size: 1.5rem; color: var(--text-main);
+  margin: 0 0 24px 0; font-weight: 800; letter-spacing: -0.02em;
+}
+
 .modal-actions {
-  display: flex;
-  gap: 12px;
-  margin-top: 24px;
-  width: 100%;
+  display: flex; gap: 12px; margin-top: 32px; width: 100%;
 }
 .modal-actions button {
-  flex: 1;
+  flex: 1; height: 44px; font-size: 1rem;
+}
+
+
+/* Outline button for modals */
+.btn-outline {
+  padding: 10px 16px;
+  font-weight: 700;
+  font-size: 0.9rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: inherit;
+  background: transparent;
+  color: var(--text-secondary);
+  border: 2px solid var(--border);
+  transition: all 0.2s ease;
+}
+.btn-outline:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+/* Delete link in modals */
+.btn-delete-link {
+  display: block;
+  width: 100%;
+  text-align: center;
+  margin-top: 16px;
+  padding: 8px;
+  background: transparent;
+  border: none;
+  color: var(--accent-red);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  opacity: 0.8;
+  transition: opacity 0.2s;
+}
+.btn-delete-link:hover {
+  opacity: 1;
 }
 
 /* --- TOAST --- */
@@ -468,7 +548,7 @@ tr:hover .actions {
 /* --- MOBILE OPTIMIZATION --- */
 @media screen and (max-width: 600px) {
   #app-container {
-    padding: 15px;
+    padding: 12px;
   }
 
   .auth-container {
@@ -478,37 +558,86 @@ tr:hover .actions {
     padding: 10px;
   }
 
+  /* Fixed Mobile Navbar */
   .dashboard-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 15px;
-    margin-bottom: 20px;
+    flex-direction: row; align-items: center; justify-content: space-between;
+    gap: 0; margin-bottom: 24px;
   }
   .user-controls {
-    width: 100%;
-    justify-content: space-between;
-    background: white;
-    padding: 10px;
-    box-sizing: border-box;
-    border-radius: 12px;
-    border: 1px solid var(--border);
+    display: flex; align-items: center; gap: 12px;
+    background: transparent; border: none; padding: 0; width: auto;
   }
 
+  /* Fixed Mobile Summary Cards */
   .summary-cards {
-    grid-template-columns: 1fr;
-    gap: 10px;
-    margin-bottom: 30px;
+    display: flex; flex-direction: row; gap: 8px; width: 100%;
+    margin-bottom: 32px; /* Separation */
+  }
+  .summary-cards .card {
+    flex: 1; padding: 10px 4px;
+    display: flex; flex-direction: column; 
+    justify-content: center; align-items: center;
+    border-radius: 12px; min-height: 70px;
+  }
+  .summary-cards .card h4 {
+    margin-bottom: 4px; letter-spacing: 0.05em;
+  }
+  .summary-cards .card p {
+    font-size: 0.95rem; margin-top: 0; line-height: 1.2;
+  }
+
+  /* Mobile Viz Header Fix */
+  .viz-header {
+    align-items: baseline; 
+    margin-bottom: 16px;
+  }
+  .viz-month-select {
+    font-size: 1.1rem; 
+    padding-right: 18px; /* Tighter arrow gap */
+    transform: translateY(1px);
+    background-position: right 0 center; /* Fix arrow pos */
+  }
+  .viz-big-number {
+    font-size: 1.5rem; line-height: 1;
+  }
+  
+  /* Mobile Search Bar */
+  .filter-bar input {
+    background: white;
+    border: 1px solid var(--border);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  }
+  
+  /* Month Header Mobile Overrides */
+  .month-header {
+     background: transparent;
+     padding: 12px 0;
+     border-bottom: 2px solid var(--text-main); /* Thick separator like design */
+     border-radius: 0;
+  }
+  .month-group {
+    background: transparent; border: none; box-shadow: none; border-radius: 0;
+    margin-bottom: 16px;
+  }
+  /* Fix text cuttoff row */
+  td:nth-child(2) {
+    max-width: 140px; /* Reduced from calc to be safer */
   }
 
   .filter-bar {
     flex-direction: row;
     flex-wrap: wrap;
+    margin-bottom: 12px;
   }
   .filter-bar input {
     flex: 2;
+    height: 38px;
+    font-size: 0.85rem;
   }
   .filter-bar select {
     flex: 1;
+    height: 38px;
+    font-size: 0.85rem;
   }
 
   thead {
@@ -526,80 +655,99 @@ tr:hover .actions {
     color: var(--text-muted);
   }
 
+  /* Ultra-compact mobile transaction cards */
   tr {
     display: grid;
     grid-template-columns: 1fr auto;
+    grid-template-rows: auto auto;
     grid-template-areas:
       "desc amount"
-      "date ."
-      "cat actions";
-
+      "meta actions";
     background: #ffffff !important;
     border: 1px solid var(--border);
-    border-radius: 16px;
-    padding: 16px;
-    margin-bottom: 12px;
-    gap: 8px;
+    border-radius: 10px;
+    padding: 8px 12px;
+    margin-bottom: 6px;
+    gap: 2px 8px;
     align-items: center;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
   }
 
   td {
     border: none;
     padding: 0;
   }
+  
+  /* Row 1: Description */
   td:nth-child(2) {
     grid-area: desc;
-    font-size: 1rem;
-    font-weight: 700;
-    margin-bottom: 2px;
-    width: auto;
+    font-size: 0.85rem;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: calc(100vw - 150px); /* Leave room for amount */
   }
+  
+  /* Row 1: Amount */
   td:nth-child(4) {
     grid-area: amount;
-    justify-self: end;
-    align-self: start;
-    font-size: 1.1rem;
-    font-weight: 800;
+    font-size: 0.9rem;
+    font-weight: 700;
     color: var(--primary);
-    width: auto;
     white-space: nowrap;
-  }
-  td:nth-child(1) {
-    grid-area: date;
-    font-size: 0.8rem;
-    color: var(--text-muted);
-    width: auto;
-  }
-  td:nth-child(3) {
-    grid-area: cat;
-    align-self: center;
-    width: auto;
-  }
-  td:nth-child(5) {
-    grid-area: actions;
+    text-align: right;
     justify-self: end;
-    align-self: center;
-    width: auto;
+    min-width: 70px; /* Ensure amounts don't get clipped */
+  }
+  
+  /* Row 2: Date (left side) */
+  td:nth-child(1) {
+    grid-area: meta;
+    font-size: 0.7rem;
+    color: var(--text-muted);
+  }
+  
+  /* Category pill - next to date */
+  td:nth-child(3) {
+    grid-area: meta;
+    justify-self: start;
+    padding-left: 8px;
+  }
+  
+  td:nth-child(3) span {
+    font-size: 0.6rem;
+    padding: 2px 6px;
+    border-radius: 4px;
+    max-width: 80px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    display: inline-block;
+  }
+  
+  /* Row 2: Actions - hidden since rows are tappable */
+  td:nth-child(5) {
+    display: none;
   }
 
   .actions {
     opacity: 1;
     display: flex;
     flex-direction: row;
-    gap: 12px;
+    gap: 6px;
   }
   .btn-action {
-    padding: 6px 0;
-    font-size: 0.85rem;
+    padding: 2px 6px;
+    font-size: 0.65rem;
     background: transparent;
     border: none;
     color: var(--text-muted);
     text-transform: uppercase;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.02em;
     font-weight: 700;
     box-shadow: none;
-    min-height: 44px; /* Ensure mobile tap target is large */
+    min-height: 24px;
   }
   .btn-action:hover {
     background: transparent;
@@ -659,23 +807,72 @@ tr:hover .actions {
 .viz-header {
   display: flex;
   justify-content: space-between;
-  align-items: flex-end; /* Bottom align for cleaner look */
+  align-items: flex-end;
   margin-bottom: 20px;
+  gap: 20px;
 }
-.viz-month-selector {
+
+/* Left side - Total Spent */
+.viz-total-left {
+  text-align: left;
   display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.viz-amount-row {
+  display: flex;
+  align-items: baseline;
   gap: 12px;
 }
-.viz-month.active {
-  font-size: 1.5rem; /* Matches .dash-title */
+
+/* Right side - Month Dropdown - aligned with amount */
+.viz-month-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: flex-end;
+  padding-bottom: 2px; /* Fine-tune to align with big number baseline */
+}
+
+.viz-month-select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background: transparent;
+  border: none;
+  font-size: 1.5rem;
   font-weight: 800;
   color: var(--primary);
   letter-spacing: -0.02em;
+  font-family: inherit;
+  cursor: pointer;
+  padding: 0;
+  padding-right: 28px;
+  margin: 0;
+  text-align: right;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%234a3b32' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right center;
+  background-size: 18px;
+  transition: opacity 0.2s ease;
 }
 
-.viz-total-section {
-  text-align: right;
+.viz-month-select:hover {
+  opacity: 0.7;
 }
+
+.viz-month-select:focus {
+  outline: none;
+}
+
+.viz-month-select option {
+  font-size: 1rem;
+  font-weight: 600;
+  padding: 8px;
+  text-align: left;
+}
+
 .viz-label {
   font-size: 0.7rem;
   font-weight: 800;
@@ -701,6 +898,7 @@ tr:hover .actions {
 }
 .viz-trend.up { color: var(--accent-red); }
 .viz-trend.down { color: var(--accent-green); }
+.viz-trend.neutral { color: var(--text-muted); }
 
 /* Segmented Bar */
 .viz-bar-container {
@@ -792,5 +990,38 @@ tr:hover .actions {
 @media screen and (max-width: 600px) {
   .viz-legend {
     gap: 8px;
+  }
+  
+  /* Make last odd item span full width for better layout */
+  .viz-item:last-child:nth-child(odd) {
+    grid-column: span 2;
+  }
+  
+  .viz-item {
+    padding: 10px;
+    border-radius: 10px;
+  }
+  
+  .viz-header {
+    flex-direction: row;
+    align-items: flex-end;
+  }
+  
+  .viz-month-select {
+    font-size: 1.1rem;
+    padding-right: 20px;
+    background-size: 12px;
+  }
+  
+  .viz-big-number {
+    font-size: 1.4rem;
+  }
+  
+  .viz-label {
+    font-size: 0.6rem;
+  }
+  
+  .viz-trend {
+    font-size: 0.75rem;
   }
 }

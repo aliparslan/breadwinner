@@ -105,6 +105,10 @@ document.getElementById("filter-search").addEventListener("input", debounce(appl
 document.getElementById("filter-category").addEventListener("change", applyFilters);
 
 // --- MONTHLY VIZ LOGIC ---
+let vizMonthsData = {}; // Global store for month data
+let vizSortedMonthKeys = []; // Sorted month keys
+let vizCurrentMonthIndex = 0; // Track currently selected month
+
 function renderMonthlyViz(transactions) {
   const container = document.getElementById("monthly-viz");
   if (!container) return;
@@ -120,26 +124,36 @@ function renderMonthlyViz(transactions) {
   }
 
   // 2. Group by Month (YYYY-MM)
-  const months = {};
+  vizMonthsData = {};
   expenses.forEach((t) => {
     const key = t.date.substring(0, 7); // "2023-10"
-    if (!months[key]) months[key] = [];
-    months[key].push(t);
+    if (!vizMonthsData[key]) vizMonthsData[key] = [];
+    vizMonthsData[key].push(t);
   });
 
-  const sortedMonthKeys = Object.keys(months).sort().reverse(); // ["2023-10", "2023-09"]
-  const currentKey = sortedMonthKeys[0];
-  const prevKey = sortedMonthKeys[1]; // Might be undefined
+  vizSortedMonthKeys = Object.keys(vizMonthsData).sort().reverse(); // ["2023-10", "2023-09"]
+  vizCurrentMonthIndex = 0; // Reset to most recent month
+  
+  renderVizForMonth(vizCurrentMonthIndex);
+  container.classList.remove("hidden");
+}
+
+function renderVizForMonth(monthIndex) {
+  const container = document.getElementById("monthly-viz");
+  if (!container) return;
+
+  const currentKey = vizSortedMonthKeys[monthIndex];
+  const prevKey = vizSortedMonthKeys[monthIndex + 1]; // Compare with the month before the selected one
 
   // 3. Current Month Stats
-  const currentTxs = months[currentKey];
+  const currentTxs = vizMonthsData[currentKey];
   const currentTotal = currentTxs.reduce((sum, t) => sum + Math.abs(parseFloat(t.amount)), 0);
 
   // 4. Previous Month Stats (for delta)
   let prevTotal = 0;
   let prevCatTotals = {};
   if (prevKey) {
-    const prevTxs = months[prevKey];
+    const prevTxs = vizMonthsData[prevKey];
     prevTotal = prevTxs.reduce((sum, t) => sum + Math.abs(parseFloat(t.amount)), 0);
     prevTxs.forEach((t) => {
       prevCatTotals[t.categoryName] = (prevCatTotals[t.categoryName] || 0) + Math.abs(parseFloat(t.amount));
@@ -190,15 +204,23 @@ function renderMonthlyViz(transactions) {
   ];
 
   // 7. Generate HTML
-  // Current Month Name
-  const [y, m] = currentKey.split("-");
-  const monthName = new Date(parseInt(y), parseInt(m) - 1).toLocaleString("default", { month: "long" });
+  // Build month dropdown options
+  const monthDropdownOptions = vizSortedMonthKeys.map((key, idx) => {
+    const [y, m] = key.split("-");
+    const monthName = new Date(parseInt(y), parseInt(m) - 1).toLocaleString("default", { month: "long", year: "numeric" });
+    return `<option value="${idx}" ${idx === monthIndex ? 'selected' : ''}>${monthName}</option>`;
+  }).join("");
 
-  const totalDeltaHtml = prevKey
-    ? `<span class="viz-trend ${totalDeltaPct > 0 ? "up" : "down"}">
-         ${totalDeltaPct > 0 ? "▲" : "▼"} ${Math.abs(totalDeltaPct).toFixed(1)}%
-       </span>`
-    : `<span class="viz-trend" style="color:var(--text-muted)">New</span>`;
+  let totalDeltaHtml;
+  if (!prevKey) {
+    totalDeltaHtml = `<span class="viz-trend neutral">New</span>`;
+  } else if (Math.abs(totalDeltaPct) < 0.1) {
+    totalDeltaHtml = `<span class="viz-trend neutral">—</span>`;
+  } else if (totalDeltaPct > 0) {
+    totalDeltaHtml = `<span class="viz-trend up">▲ ${totalDeltaPct.toFixed(1)}%</span>`;
+  } else {
+    totalDeltaHtml = `<span class="viz-trend down">▼ ${Math.abs(totalDeltaPct).toFixed(1)}%</span>`;
+  }
 
   // Bars HTML: Show Top 6 for visual clarity
   const barsHtml = catStats
@@ -212,12 +234,23 @@ function renderMonthlyViz(transactions) {
   // Legend/Grid HTML: Show ALL categories
   const legendHtml = catStats
     .map((c, i) => {
-      // Create a faded color for items beyond the top 6 to show they aren't in the bar? 
-      // Or just cycle colors. Let's cycle.
       const color = colors[i % colors.length];
-      const arrow = c.delta > 0 ? "▲" : "▼";
-      const deltaStr = c.prevAmount > 0 ? `${arrow} ${Math.abs(c.delta).toFixed(1)}%` : "New";
-      const deltaColor = c.prevAmount > 0 ? (c.delta > 0 ? "var(--accent-red)" : "var(--accent-green)") : "var(--text-muted)";
+      
+      // Determine delta display
+      let deltaStr, deltaColor;
+      if (c.prevAmount === 0) {
+        deltaStr = "New";
+        deltaColor = "var(--text-muted)";
+      } else if (Math.abs(c.delta) < 0.1) {
+        deltaStr = "—";
+        deltaColor = "var(--text-muted)";
+      } else if (c.delta > 0) {
+        deltaStr = `▲ ${c.delta.toFixed(1)}%`;
+        deltaColor = "var(--accent-red)";
+      } else {
+        deltaStr = `▼ ${Math.abs(c.delta).toFixed(1)}%`;
+        deltaColor = "var(--accent-green)";
+      }
 
       // Simple indicator if it's in the bar chart
       const isHiddenInBar = i >= 6;
@@ -244,13 +277,17 @@ function renderMonthlyViz(transactions) {
   const html = `
     <div class="viz-card">
       <div class="viz-header">
-        <div class="viz-month-selector">
-          <span class="viz-month active">${monthName}</span>
-        </div>
-        <div class="viz-total-section">
+        <div class="viz-total-left">
           <span class="viz-label">Total Spent</span>
-          <div class="viz-big-number">${formatCurrency(currentTotal)}</div>
-          ${totalDeltaHtml}
+          <div class="viz-amount-row">
+            <span class="viz-big-number">${formatCurrency(currentTotal)}</span>
+            ${totalDeltaHtml}
+          </div>
+        </div>
+        <div class="viz-month-right">
+          <select id="viz-month-dropdown" class="viz-month-select" onchange="onVizMonthChange(this.value)">
+            ${monthDropdownOptions}
+          </select>
         </div>
       </div>
 
@@ -266,7 +303,11 @@ function renderMonthlyViz(transactions) {
   `;
 
   container.innerHTML = html;
-  container.classList.remove("hidden");
+}
+
+function onVizMonthChange(monthIndexStr) {
+  vizCurrentMonthIndex = parseInt(monthIndexStr, 10);
+  renderVizForMonth(vizCurrentMonthIndex);
 }
 
 function renderDashboard(transactions) {
@@ -344,21 +385,14 @@ function renderDashboard(transactions) {
 function renderRow(tx) {
   const isNeg = tx.amount < 0;
   const desc = tx.description.length > 40 ? tx.description.substring(0, 38) + "..." : tx.description;
-  // Always positive amount
+  // Tappable row - opens edit modal
   return `
-    <tr>
+    <tr onclick="openEdit(${tx.id})" style="cursor: pointer;" tabindex="0" role="button" aria-label="Edit ${desc}">
       <td>${formatDate(tx.date)}</td>
       <td>${desc}</td>
       <td><span>${tx.categoryName}</span></td>
       <td style="color:${isNeg ? "var(--text-main)" : "var(--accent-green)"}">${formatCurrency(Math.abs(tx.amount))}</td>
-      <td>
-        <div class="actions">
-          <button class="btn-action btn-edit" onclick="openEdit(${tx.id})" aria-label="Edit transaction">Edit</button>
-          <button class="btn-action btn-del" onclick="initiateDelete(${
-            tx.id
-          })" aria-label="Delete transaction">Del</button>
-        </div>
-      </td>
+      <td></td>
     </tr>`;
 }
 
@@ -434,11 +468,16 @@ function openAddModal() {
   document.getElementById("edit-date").value = new Date().toISOString().split("T")[0];
   setTxType("expense");
   renderCats();
+  // Hide delete button for new transactions
+  document.getElementById("delete-tx-btn").classList.add("hidden");
   document.getElementById("edit-modal").classList.remove("hidden");
   document.getElementById("edit-amount").focus();
 }
 
-function openEdit(id) {
+function openEdit(id, event) {
+  // Prevent row click bubbling if clicking specific elements
+  if (event) event.stopPropagation();
+  
   const tx = allTransactions.find((t) => t.id == id);
   if (!tx) return;
   currentEditId = id;
@@ -449,6 +488,8 @@ function openEdit(id) {
   setTxType(rawAmt >= 0 ? "income" : "expense");
   document.getElementById("edit-date").value = tx.date;
   renderCats(tx.category_id);
+  // Show delete button for existing transactions
+  document.getElementById("delete-tx-btn").classList.remove("hidden");
   document.getElementById("edit-modal").classList.remove("hidden");
 }
 
@@ -460,6 +501,28 @@ function renderCats(sel) {
 
 function closeModal() {
   document.getElementById("edit-modal").classList.add("hidden");
+}
+
+// Delete directly from modal without confirmation
+async function deleteFromModal() {
+  if (!currentEditId) return;
+  const id = currentEditId;
+  
+  closeModal();
+  
+  // Optimistic Delete
+  const originalTxs = [...allTransactions];
+  allTransactions = allTransactions.filter((t) => t.id !== id);
+  applyFilters();
+  showToast("Transaction deleted", "success");
+
+  const { error } = await client.from("transactions").delete().eq("id", id);
+  if (error) {
+    console.error("Delete failed", error);
+    allTransactions = originalTxs;
+    applyFilters();
+    showToast("Failed to delete", "error");
+  }
 }
 
 async function saveEdit() {
@@ -616,3 +679,11 @@ function updateUI(s) {
 
 // Init
 checkUser();
+
+// Close modal on Escape key
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    closeModal();
+    if (typeof closeConfirm === 'function') closeConfirm(false); // Check if exists
+  }
+});

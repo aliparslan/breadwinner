@@ -59,6 +59,9 @@
           </div>
         </div>
 
+        <div class="section-header overview-header">
+          <h3>Overview</h3>
+        </div>
         <div class="summary-cards">
           <div class="card">
             <h4>Income</h4>
@@ -85,7 +88,14 @@
           <h3>Transactions</h3>
           <div class="header-actions">
             <input type="file" id="file-input" accept=".pdf" style="display: none" />
-            <button id="trigger-upload-btn" class="secondary action-btn">PDF</button>
+            <button id="trigger-upload-btn" class="secondary action-btn">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="17 8 12 3 7 8"></polyline>
+                <line x1="12" y1="3" x2="12" y2="15"></line>
+              </svg>
+              Upload
+            </button>
             <button onclick="openAddModal()" class="primary-btn action-btn">+ Add</button>
           </div>
         </div>
@@ -139,9 +149,10 @@
         <select id="edit-category"></select>
 
         <div class="modal-actions">
-          <button class="secondary" onclick="closeModal()">Cancel</button>
+          <button class="btn-outline" onclick="closeModal()">Cancel</button>
           <button class="primary-btn" onclick="saveEdit()">Save</button>
         </div>
+        <button id="delete-tx-btn" class="btn-delete-link hidden" onclick="deleteFromModal()">Delete Transaction</button>
       </div>
     </div>
 
