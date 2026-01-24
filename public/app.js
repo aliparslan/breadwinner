@@ -525,6 +525,16 @@ function renderDashboard(transactions, forceExpand = false) {
     return;
   }
 
+  // Determine focused month from Viz state
+  let activeMonthLabel = null;
+  const currentVizKey = vizSortedMonthKeys[vizCurrentMonthIndex];
+  if (currentVizKey && currentVizKey !== "all") {
+    const [y, m] = currentVizKey.split("-");
+    // Ensure we match the "Month YYYY" format used by the grouper
+    const d = new Date(parseInt(y), parseInt(m) - 1);
+    activeMonthLabel = d.toLocaleString("default", { month: "long", year: "numeric" });
+  }
+
   // Render months with collapsible headers (default collapsed, persisted per-month)
   container.innerHTML = Object.entries(grouped)
     .map(([month, txs]) => {
@@ -535,9 +545,21 @@ function renderDashboard(transactions, forceExpand = false) {
       const monthKey = month.replace(/\s+/g, '-');
       const savedState = localStorage.getItem(`month-${monthKey}`);
       
-      // Expand if forced (filtering) OR if explicitly saved as expanded
-      // If we are forcing expand (filtering), we show it, but DO NOT overwrite the saved preference yet.
-      const isExpanded = forceExpand || savedState === 'true'; 
+      // Expand Logic:
+      // 1. If NOT forcing expand (normal view): Use saved state.
+      // 2. If forcing expand (filter/search):
+      //    a. If we have a specific active viz month, ONLY expand that month.
+      //    b. If "All Time" is selected, expand everything.
+      let isExpanded = savedState === 'true';
+      
+      if (forceExpand) {
+        if (activeMonthLabel) {
+           isExpanded = (month === activeMonthLabel);
+        } else {
+           isExpanded = true;
+        }
+      }
+      
       const hiddenClass = isExpanded ? '' : 'hidden';
 
       return `
