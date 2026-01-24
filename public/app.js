@@ -784,7 +784,7 @@ if (trigger && input) {
     else fd.append("file", f);
     fd.append("filename", f.name);
 
-    showToast("AI Analyzing...", "loading");
+    showToast("Analyzing...", "loading");
 
     try {
       const res = await fetch("/api/upload", {

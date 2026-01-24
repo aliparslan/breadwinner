@@ -91,7 +91,7 @@ body {
 input, select {
   width: 100%; padding: 10px 12px; /* Compact */
   background: #ffffff; /* White for better contrast in modals */
-  border: 1px solid #e7d8c9; /* Visible warm border */
+  border: 1px solid var(--border); /* Consistent theme border */
   border-radius: 8px; /* Sharper */
   font-size: 0.95rem; color: var(--text-main);
   box-sizing: border-box; margin-bottom: 8px;
@@ -155,32 +155,34 @@ button:active { transform: scale(0.96); }
 
 button.primary-btn {
   background: var(--primary); color: white;
-  box-shadow: 0 4px 12px -2px rgba(74, 59, 50, 0.3);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
 }
 button.primary-btn:hover {
   background: var(--primary-hover);
-  box-shadow: 0 6px 16px -4px rgba(74, 59, 50, 0.5);
   transform: translateY(-1px);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
 }
 
 button.secondary {
-  background: transparent; color: var(--text-secondary);
+  background: white; color: var(--text-main);
+  border: 1px solid var(--border);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
 }
 button.secondary:hover {
-  background: rgba(0,0,0,0.04); color: var(--text-main);
+  background: #fafaf9;
 }
 .auth-buttons button.secondary {
-  border: 2px solid #e7e5e4;
+  border: 1px solid var(--border);
 }
 
 /* --- TOGGLE BUTTONS (Modal Toggle - Warm Theme) --- */
 .type-toggle-container {
   display: flex; 
-  background: linear-gradient(135deg, #f5f3f1 0%, #ede9e5 100%);
+  background: #fafaf9;
   padding: 3px; 
   border-radius: 10px; 
   margin-bottom: 16px;
-  border: 1px solid #e7d8c9;
+  border: 1px solid var(--border);
 }
 .type-btn {
   flex: 1; border: none; background: transparent;
@@ -203,7 +205,7 @@ button.secondary:hover {
   /* Reduced spacing for better vertical centering */
   margin-bottom: 20px;
   padding-bottom: 20px;
-  border-bottom: 1px solid #e7d8c9;
+  border-bottom: 1px solid var(--border);
   line-height: normal;
 }
 .dash-brand { display: flex; align-items: center; gap: 10px; transition: opacity 0.2s;}
@@ -254,7 +256,7 @@ button.secondary:hover {
   margin-top: 4px;
   min-width: 200px;
   background: white;
-  border: 1px solid #e7d8c9;
+  border: 1px solid var(--border);
   border-radius: 10px;
   box-shadow: 0 8px 24px rgba(74, 59, 50, 0.15);
   z-index: 1000;
@@ -624,7 +626,7 @@ tr:hover .actions {
   padding: 6px 10px;
   font-size: 0.75rem;
   background: white;
-  border: 1px solid #d7ccc8;
+  border: 1px solid var(--border);
   color: var(--text-secondary);
   border-radius: 8px;
   font-weight: 600;
@@ -653,36 +655,31 @@ tr:hover .actions {
 .modal-overlay {
   position: fixed; top: 0; left: 0; width: 100%; height: 100%;
   display: flex; justify-content: center; align-items: center;
-  background-color: rgba(41, 37, 36, 0.5); /* Warm dark overlay */
-  backdrop-filter: blur(8px);
+  background-color: rgba(41, 37, 36, 0.4); /* Slightly lighter overlay */
+  backdrop-filter: blur(16px); /* Stronger premium blur */
   z-index: 2000; padding: 20px; box-sizing: border-box;
   animation: fadeIn 0.2s ease-out;
 }
 .modal {
-  background: linear-gradient(135deg, #fffbf7 0%, #fef8f3 100%);
+  background: #ffffff;
   padding: 0;
-  border-radius: 16px;
+  border-radius: 20px; /* Slightly rounder for modern feel */
   width: 100%; max-width: 420px;
-  box-shadow: 0 25px 50px -12px rgba(74, 59, 50, 0.25);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
   position: relative;
   max-height: 90vh; overflow-y: auto;
-  border: 1px solid #e7d8c9; /* Warmer border matching theme */
+  border: 1px solid var(--border);
   transform: translateY(0);
   animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .modal-header {
   padding: 20px 24px 16px;
-  border-bottom: 1px solid #e7d8c9;
-  background: linear-gradient(135deg, #fdfaf6 0%, #f9f5f0 100%);
+  border-bottom: 1px solid var(--border);
+  background: transparent;
   display: flex;
   align-items: center;
   gap: 10px;
-}
-
-.modal-header::before {
-  content: "✏️";
-  font-size: 1rem;
 }
 
 .modal-body {
@@ -710,23 +707,23 @@ tr:hover .actions {
   flex: 1; height: 44px; font-size: 0.95rem; border-radius: 10px;
 }
 
-
 /* Outline button for modals */
 .btn-outline {
   padding: 10px 16px;
   font-weight: 700;
   font-size: 0.9rem;
-  border-radius: 8px;
+  border-radius: 10px; /* Match modal actions radius */
   cursor: pointer;
   font-family: inherit;
   background: transparent;
   color: var(--text-secondary);
-  border: 2px solid var(--border);
+  border: 1px solid var(--border); /* Thinner border for elegance */
   transition: all 0.2s ease;
 }
 .btn-outline:hover {
   border-color: var(--primary);
   color: var(--primary);
+  background: #fafaf9; /* Subtle hover bg */
 }
 
 /* Delete link in modals */
@@ -1139,14 +1136,14 @@ tr:hover .actions {
 }
 
 .stat-card {
-  background: linear-gradient(135deg, #ffffff 0%, #fdfcfb 100%);
-  border: 1px solid #e7d8c9;
+  background: white;
+  border: 1px solid var(--border);
   border-radius: 12px;
   padding: 14px 16px;
   display: flex;
   flex-direction: column;
   gap: 4px;
-  box-shadow: 0 2px 6px rgba(74, 59, 50, 0.04);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
 }
 
 .stat-card-row {
@@ -1353,17 +1350,12 @@ tr:hover .actions {
   color: var(--text-muted);
 }
 
-/* Segmented Bar - Glassmorphism Style */
+/* Segmented Bar - Clean Style */
 .viz-bar-container {
   height: 48px; /* Taller to accommodate internal padding */
-  background: rgba(255, 255, 255, 0.9); /* Higher contrast (nearly opaque) */
-  backdrop-filter: blur(12px); /* Frosted glass effect */
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid #d6ccc2; /* Darker visible border */
-  box-shadow: 
-    0 4px 6px -1px rgba(0, 0, 0, 0.05), 
-    0 2px 4px -1px rgba(0, 0, 0, 0.03),
-    inset 0 1px 2px rgba(255, 255, 255, 0.8); /* Inner highlight */
+  background: white; 
+  border: 1px solid var(--border); 
+  box-shadow: inset 0 1px 3px rgba(0,0,0,0.05); 
   border-radius: 12px; /* Consistent app radius */
   display: flex;
   overflow: hidden;
@@ -1376,8 +1368,6 @@ tr:hover .actions {
   height: 100%;
   border-radius: 0; /* Rectangular by default */
   transition: all 0.6s cubic-bezier(0.22, 1, 0.36, 1);
-  box-shadow: 0 1px 2px rgba(0,0,0,0.1); /* Subtle shadow on the segments */
-  margin-right: 3px; /* Consistent gap matching outer padding */
 }
 .viz-segment:first-child {
   border-top-left-radius: 8px; /* inner radius (12-4ish) */
@@ -1404,19 +1394,19 @@ tr:hover .actions {
 }
 .viz-item {
   /* Category cards - styled consistently with AI Insights */
-  background: linear-gradient(135deg, #ffffff 0%, #fdfcfb 100%);
-  border: 1px solid #e7d8c9; /* Warm border matching modal & theme */
+  background: white;
+  border: 1px solid var(--border);
   border-radius: 12px;
   padding: 12px 14px;
   display: flex;
   align-items: center;
   gap: 10px;
-  box-shadow: 0 2px 6px rgba(74, 59, 50, 0.04);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
   transition: all 0.2s ease;
 }
 .viz-item:hover {
-  border-color: #d4c4b8;
-  box-shadow: 0 4px 12px rgba(74, 59, 50, 0.08);
+  border-color: var(--primary);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
 }
 
 .viz-color-pill {
