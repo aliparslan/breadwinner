@@ -35,7 +35,9 @@ function formatCurrency(amount, compact = false) {
   const absNum = Math.abs(num);
   
   // 1. If explicit compact requested OR very large amount (>= 100k), use K/M notation
-  if (compact || absNum >= 100000) {
+  // User Preference: Only show K for values > 5 digits (meaning >= 100,000, 6 digits)
+  // Even if compact=true is passed, we enforce the >= 100,000 threshold.
+  if (absNum >= 100000) {
      return new Intl.NumberFormat('en-US', {
        style: 'currency',
        currency: 'USD',
