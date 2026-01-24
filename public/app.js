@@ -71,6 +71,49 @@ function applyFilters() {
 document.getElementById("filter-search").addEventListener("input", debounce(applyFilters, 300));
 document.getElementById("filter-category").addEventListener("change", applyFilters);
 
+// Global helper for visualization clicks
+window.filterByCategoryAndScroll = function(categoryName) {
+  const select = document.getElementById("filter-category");
+  if (!select) return;
+  
+  // Find the option
+  let found = false;
+  for (let i = 0; i < select.options.length; i++) {
+    if (select.options[i].value === categoryName) {
+      select.selectedIndex = i;
+      found = true;
+      break;
+    }
+  }
+
+  if (!found) {
+    // If it's "Other", it might be an aggregation, so just warn
+    if (categoryName === "Other") {
+       showToast("Cannot filter by 'Other' group", "error");
+    } else {
+       // Try to find case-insensitive match just in case
+       for (let i = 0; i < select.options.length; i++) {
+         if (select.options[i].value.toLowerCase() === categoryName.toLowerCase()) {
+           select.selectedIndex = i;
+           found = true;
+           break;
+         }
+       }
+       if (!found) showToast("Category not found in filter", "error");
+    }
+    if (!found) return;
+  }
+  
+  applyFilters();
+  
+  const target = document.querySelector(".transactions-header");
+  if (target) {
+     target.scrollIntoView({ behavior: "smooth" });
+  } else {
+     document.getElementById("tx-table-container")?.scrollIntoView({ behavior: "smooth" });
+  }
+};
+
 // --- MONTHLY VIZ LOGIC ---
 let vizMonthsData = {}; // Global store for month data
 let vizSortedMonthKeys = []; // Sorted month keys
@@ -298,7 +341,7 @@ function renderVizForMonth(monthIndex) {
     .map((c) => {
       const color = getCategoryColor(c.name);
       // Use flex-grow for sizing to handle gaps gracefully without overflow
-      return `<div class="viz-segment" style="flex: ${c.pctOfTotal} 1 0px; background: ${color}" title="${c.name}"></div>`;
+      return `<div class="viz-segment" style="flex: ${c.pctOfTotal} 1 0px; background: ${color}" title="${c.name}" onclick="filterByCategoryAndScroll('${c.name.replace(/'/g, "\\'")}')"></div>`;
     })
     .join("");
 
@@ -337,7 +380,7 @@ function renderVizForMonth(monthIndex) {
       const pillStyle = `background: ${color}`;
 
       return `
-        <div class="viz-item">
+        <div class="viz-item" onclick="filterByCategoryAndScroll('${c.name.replace(/'/g, "\\'")}')">
           <div class="viz-color-pill" style="${pillStyle}"></div>
           <div class="viz-info">
             <div class="viz-row-top">
