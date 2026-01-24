@@ -399,19 +399,20 @@ button.secondary:hover {
 }
   /* Transaction Month Header - Matches email dropdown trigger style */
 .month-header {
-  width: 100%; 
+  width: calc(100% - 8px); 
+  margin: 4px auto 0; /* Float it inside the card */
   font-size: 0.85rem; 
   font-weight: 700;
   font-family: inherit; 
   color: var(--text-secondary);
   text-transform: uppercase; 
-  padding: 12px 16px;
+  padding: 12px 20px; /* More breathing room inside */
   background: transparent;
   border: 1px solid transparent;
-  border-radius: 10px;
+  border-radius: 8px; /* Consistent rounded corners */
   display: flex; 
   align-items: center; /* Fix vertical alignment */
-  justify-content: space-between; /* Ensure text and amount are pushed apart if needed, or stick to flex behavior */
+  justify-content: space-between; 
   cursor: pointer; 
   text-align: left;
   transition: all 0.2s ease;
@@ -802,12 +803,7 @@ tr:hover .actions {
   }
   
   /* Month Header Mobile Overrides */
-  .month-header {
-     background: transparent;
-     padding: 12px 0;
-     border-bottom: 2px solid var(--text-main); /* Thick separator like design */
-     border-radius: 0;
-  }
+
   .month-group {
     background: transparent; border: none; box-shadow: none; border-radius: 0;
     margin-bottom: 16px;
@@ -838,12 +834,7 @@ tr:hover .actions {
     border: none;
     box-shadow: none;
   }
-  .month-header {
-    background: transparent;
-    padding: 0 0 8px 0;
-    border: none;
-    color: var(--text-muted);
-  }
+
 
   /* Single-line mobile transaction cards with color dot */
   /* Single-line mobile transaction cards - Copilot Style */
@@ -880,7 +871,7 @@ tr:hover .actions {
     color: var(--text-main);
     border-bottom: none;
     line-height: normal;
-    padding: 0;
+    padding: 0 0 0 4px; /* Small left padding */
     text-align: left;
     margin-right: 4px; /* Reduced margin */
   }
@@ -918,7 +909,7 @@ tr:hover .actions {
     text-align: right;
     flex-shrink: 0; /* Never shrink */
     border-bottom: none;
-    padding: 0;
+    padding: 0 4px 0 0; /* Small right padding */
     margin-left: auto; /* Push to far right if flex spacing behaves oddly */
     min-width: unset; /* Remove min-width to avoid overflow */
 
