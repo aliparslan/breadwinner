@@ -406,27 +406,32 @@ button.secondary:hover {
   color: var(--text-secondary);
   text-transform: uppercase; 
   padding: 12px 16px;
-  background: transparent; /* Same as email trigger */
-  border: 1px solid transparent; /* Same as email trigger */
+  background: transparent;
+  border: 1px solid transparent;
   border-radius: 10px;
   display: flex; 
-  align-items: center;
+  align-items: center; /* Fix vertical alignment */
+  justify-content: space-between; /* Ensure text and amount are pushed apart if needed, or stick to flex behavior */
   cursor: pointer; 
   text-align: left;
   transition: all 0.2s ease;
   letter-spacing: 0.04em;
   margin-bottom: 8px;
+  outline: none; /* Remove blue browser ring */
 }
 
-.month-header:hover {
-  background: rgba(0, 0, 0, 0.04); /* Same as email trigger hover */
-  border-color: var(--border); /* Same as email trigger hover */
+.month-header:hover, .month-header:focus {
+  background: rgba(0, 0, 0, 0.04); /* Subtle gray background */
+  border-color: transparent; /* Keep border transparent to avoid jumpiness */
 }
 
 .month-header span:first-child {
   margin-right: auto;
   color: var(--text-muted);
   font-size: 0.75rem;
+  /* Ensure text is vertically centered if it has line-height issues */
+  display: flex;
+  align-items: center;
 }
 
 .month-header span:last-of-type {
@@ -475,6 +480,12 @@ th {
 th:last-child,
 th:nth-child(4) {
   text-align: right;
+}
+th, td {
+  padding: 10px 14px; /* Reduced from 16px 20px */
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+  transition: background 0.2s;
 }
 tr {
   border-bottom: 1px solid #f5f5f4;
@@ -748,12 +759,22 @@ tr:hover .actions {
 
   /* Fixed Mobile Navbar */
   .dashboard-header {
-    flex-direction: row; align-items: center; justify-content: space-between;
-    gap: 0; margin-bottom: 24px;
+    flex-direction: row; 
+    align-items: center; /* Ensures vertical centering */
+    justify-content: space-between;
+    gap: 0; 
+    margin-bottom: 24px;
+    height: auto; /* Allow natural height */
   }
   .user-controls {
-    display: flex; align-items: center; gap: 12px;
-    background: transparent; border: none; padding: 0; width: auto;
+    display: flex; 
+    align-items: center; /* Ensures text aligns with icon */
+    gap: 12px;
+    background: transparent; 
+    border: none; 
+    padding: 0; 
+    width: auto;
+    font-size: 0.9rem; /* Match header size for visual balance */
   }
 
 
@@ -791,10 +812,7 @@ tr:hover .actions {
     background: transparent; border: none; box-shadow: none; border-radius: 0;
     margin-bottom: 16px;
   }
-  /* Fix text cuttoff row */
-  td:nth-child(2) {
-    max-width: 140px; /* Reduced from calc to be safer */
-  }
+
 
   .filter-bar {
     flex-direction: row;
@@ -828,72 +846,88 @@ tr:hover .actions {
   }
 
   /* Single-line mobile transaction cards with color dot */
+  /* Single-line mobile transaction cards - Copilot Style */
   tr {
     display: flex;
     align-items: center;
-    gap: 10px;
+    justify-content: space-between; /* Ensure outer items hit the edges */
+    gap: 4px; /* Minimal gap */
     background: #ffffff !important;
     border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 10px 12px;
+    border-radius: 12px;
+    padding: 8px 8px; /* Reduce outer padding */
     margin-bottom: 8px;
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+    min-height: 48px;
+    overflow: hidden; /* Prevent overflow */
   }
 
-  /* No color dot - showing category text instead */
-
-  /* Date - very compact */
+  /* Date - Hide on mobile */
   td:nth-child(1) {
-    font-size: 0.65rem;
-    color: var(--text-muted);
-    font-weight: 600;
-    white-space: nowrap;
-    flex-shrink: 0;
-    min-width: 40px;
-    text-transform: uppercase;
-    letter-spacing: 0.02em;
+    display: none;
+    border-bottom: none;
   }
-  
-  /* Description - takes remaining space */
+
+  /* Description - Primary content (Flex Grow) */
   td:nth-child(2) {
-    flex: 1;
-    font-size: 0.85rem;
+    flex: 1 1 auto; /* Grow and shrink */
+    width: 0; /* Critical for truncation in flex */
+    font-size: 0.9rem;
     font-weight: 600;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
     color: var(--text-main);
-    min-width: 0; /* Allow shrinking */
+    border-bottom: none;
+    line-height: normal;
+    padding: 0;
+    text-align: left;
+    margin-right: 4px; /* Reduced margin */
   }
-  
-  /* Category pill - compact, visible on mobile */
+
+  /* Category Column - Fixed Width Container - LEFT ALIGNED */
   td:nth-child(3) {
-    display: block;
+    display: flex;
+    justify-content: flex-start; /* Left align pills */
+    align-items: center;
     flex-shrink: 0;
+    width: 82px; /* Tighter yardstick for "Transportation" */
+    border-bottom: none;
+    padding: 0;
   }
-  
+
+  /* Category Pill - Auto sized within column */
   td:nth-child(3) span {
-    font-size: 0.6rem;
+    font-size: 0.6rem; /* Slightly smaller text for fit */
     padding: 3px 6px;
-    border-radius: 6px;
-    max-width: 60px;
+    border-radius: 5px;
+    max-width: 100%;
+    width: auto;
+    text-align: center;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    display: inline-block;
   }
-  
-  /* Amount - right aligned */
+
+  /* Amount - Fixed to right */
   td:nth-child(4) {
     font-size: 0.9rem;
-    font-weight: 700;
+    font-weight: 750;
     white-space: nowrap;
     text-align: right;
-    flex-shrink: 0;
+    flex-shrink: 0; /* Never shrink */
+    border-bottom: none;
+    padding: 0;
+    margin-left: auto; /* Push to far right if flex spacing behaves oddly */
+    min-width: unset; /* Remove min-width to avoid overflow */
+
   }
-  
-  /* Actions - hidden since rows are tappable */
+
+  /* Actions - hidden */
   td:nth-child(5) {
     display: none;
+    border-bottom: none;
   }
 
   .actions {
@@ -1262,21 +1296,43 @@ tr:hover .actions {
   color: var(--text-muted);
 }
 
-/* Segmented Bar */
+/* Segmented Bar - Glassmorphism Style */
 .viz-bar-container {
-  height: 34px; /* Increased from 24px */
-  background: #e7e5e4;
-  border-radius: 10px; /* Slightly larger radius for thicker bar */
+  height: 48px; /* Taller to accommodate internal padding */
+  background: rgba(255, 255, 255, 0.9); /* Higher contrast (nearly opaque) */
+  backdrop-filter: blur(12px); /* Frosted glass effect */
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid #d6ccc2; /* Darker visible border */
+  box-shadow: 
+    0 4px 6px -1px rgba(0, 0, 0, 0.05), 
+    0 2px 4px -1px rgba(0, 0, 0, 0.03),
+    inset 0 1px 2px rgba(255, 255, 255, 0.8); /* Inner highlight */
+  border-radius: 12px; /* Consistent app radius */
   display: flex;
   overflow: hidden;
   margin-bottom: 24px;
-  padding: 3px;
-  gap: 3px;
+  padding: 5px; /* Padding creates the "tube" effect */
+  gap: 0; 
+  align-items: center;
 }
 .viz-segment {
   height: 100%;
-  border-radius: 7px;
+  border-radius: 0; /* Rectangular by default */
   transition: all 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.1); /* Subtle shadow on the segments */
+  margin-right: 3px; /* Consistent gap matching outer padding */
+}
+.viz-segment:first-child {
+  border-top-left-radius: 8px; /* inner radius (12-4ish) */
+  border-bottom-left-radius: 8px;
+}
+.viz-segment:last-child {
+  margin-right: 0;
+  border-top-right-radius: 8px;
+  border-bottom-right-radius: 8px;
+}
+.viz-segment:first-child:last-child {
+  border-radius: 8px;
 }
 /* Use opacity for pastel look */
 .viz-segment:hover {
@@ -1361,9 +1417,7 @@ tr:hover .actions {
     grid-template-columns: repeat(2, 1fr); /* Back to 2 columns */
     gap: 8px;
   }
-  .viz-item:last-child:nth-child(odd) {
-    grid-column: span 2; /* Full width for odd last item */
-  }
+  /* Removed span 2 for last child to keep consistent grid sizing */
   .viz-item {
     padding: 10px 12px;
     border-radius: 10px;

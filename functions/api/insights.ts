@@ -125,21 +125,48 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
       .map(([name, total]) => `${name}: ${((total / totalExpenses) * 100).toFixed(0)}%`)
       .join(", ");
 
-    const prompt = `Analyze this spending data and describe trends and patterns in 2-3 sentences. Focus on:
-- Spending distribution across categories (use percentages)
-- Any notable outliers or unusual patterns
-- Comparisons between categories
+    // Calculate additional metrics for behavioral insights
+    const txCount = transactions.length;
+    const avgTransaction = txCount > 0 ? (totalExpenses / monthlyTotals[Object.keys(monthlyTotals)[0]]?.expenses || 1) : 0; // Rough avg estimate or just use total/count
+    const simpleAvg = txCount > 0 ? (totalExpenses + totalIncome) / txCount : 0; // Very rough
+    
+    // Find largest single transaction
+    const largestTx = transactions.reduce((max: any, t: any) => 
+      Math.abs(parseFloat(t.amount)) > Math.abs(parseFloat(max.amount || 0)) ? t : max
+    , { amount: 0, categories: { name: 'None' } });
 
-Do NOT give tips or advice. Only describe what you observe in the data.
+    // Calculate specific category transaction counts (for "impulse" vs "bulk" inference)
+    const catCounts: Record<string, number> = {};
+    transactions.forEach((tx: any) => {
+       const name = tx.categories?.name || "Other";
+       catCounts[name] = (catCounts[name] || 0) + 1;
+    });
+    
+    // Format top categories with count for context: "Dining ($500, 12 txs)"
+    const detailedCategories = Object.entries(categoryTotals)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([name, total]) => {
+        const count = catCounts[name] || 0;
+        return `${name}: $${total.toFixed(0)} (${count} txs)`;
+      })
+      .join(", ");
 
-Data:
-- Monthly outflow: $${summaryData.totalExpenses}
-- Income: $${summaryData.totalIncome}
-- Net: $${summaryData.netSavings}
-- Spending breakdown: ${categoryPercentages}
-- Period: ${summaryData.monthCount} months
+    const prompt = `Role: Financial Data Analyst.
+Task: Synthesize the provided transaction data into behavioral insights.
 
-Keep under 60 words. Be specific with numbers and percentages.`;
+Guidelines:
+- Ignore the Obvious: Do not simply list the largest categories unless they show an unusual spike or deviation.
+- Identify Anomalies: Focus on unusual transaction frequencies, large single purchases, or spending concentration.
+- Infer Patterns: Connect the data to logical lifestyle assumptions (e.g., "impulse buying," "bulk shopping," "lifestyle creep," "subscription fatigue").
+- Format: 3-5 sentences. No advice or tips. Max 100 words. Be specific with numbers.
+
+Context Data:
+- Total Spending: $${summaryData.totalExpenses} over ${summaryData.monthCount} months
+- Breakdown: ${detailedCategories}
+- Largest Single Purchase: ${largestTx.categories?.name} ($${Math.abs(parseFloat(largestTx.amount)).toFixed(0)})
+- Transaction Volume: ${txCount} recorded transactions
+`;
 
     let result;
     try {

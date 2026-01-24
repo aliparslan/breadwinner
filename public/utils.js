@@ -32,22 +32,33 @@ function toggleLoading(show) {
 // --- FORMATTING ---
 function formatCurrency(amount, compact = false) {
   const num = parseFloat(amount);
+  const absNum = Math.abs(num);
   
-  if (compact && Math.abs(num) >= 100000) {
+  // 1. If explicit compact requested OR very large amount (>= 100k), use K/M notation
+  if (compact || absNum >= 100000) {
      return new Intl.NumberFormat('en-US', {
        style: 'currency',
        currency: 'USD',
        notation: 'compact',
        compactDisplay: 'short',
-       maximumFractionDigits: 2
+       maximumFractionDigits: 1 // e.g. $1.5M, $500K
      }).format(num);
   }
 
-  const isNeg = num < 0;
-  const absVal = Math.abs(num).toFixed(2);
-  // Add commas for thousands in standard view too
-  const withCommas = absVal.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-  return (isNeg ? "-$" : "$") + withCommas;
+  // 2. If reasonably large (>= 1000), remove cents
+  if (absNum >= 1000) {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      maximumFractionDigits: 0
+    }).format(num);
+  }
+
+  // 3. Standard (< 1000): Keep cents
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD'
+  }).format(num);
 }
 
 function formatDate(dateString) {

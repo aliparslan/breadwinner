@@ -105,7 +105,23 @@ function renderMonthlyViz(transactions) {
   // Sort keys with "all" first, then months descending
   const monthKeys = Object.keys(vizMonthsData).filter(k => k !== "all").sort().reverse();
   vizSortedMonthKeys = ["all", ...monthKeys];
-  vizCurrentMonthIndex = 0; // Start with All Time
+  
+  // Default Preference Logic:
+  // 1. Try to load from localStorage
+  // 2. If not found, default to most recent month (index 1) if available
+  // 3. Fallback to All Time (index 0)
+  const storedMonth = localStorage.getItem("breadwinner_month_pref");
+  let defaultIndex = 1; // Default to most recent month (index 1 usually, since 0 is 'all')
+  
+  if (storedMonth) {
+     const foundIndex = vizSortedMonthKeys.indexOf(storedMonth);
+     if (foundIndex >= 0) defaultIndex = foundIndex;
+  }
+  
+  // Safety check: if only "all" exists or defaultIndex out of bounds
+  if (defaultIndex >= vizSortedMonthKeys.length) defaultIndex = 0;
+  
+  vizCurrentMonthIndex = defaultIndex;
   
   renderVizForMonth(vizCurrentMonthIndex);
   container.classList.remove("hidden");
@@ -242,17 +258,52 @@ function renderVizForMonth(monthIndex) {
   const incomeTickerHtml = getTickerHtml(periodIncome, prevIncome, false);
   const netTickerHtml = getTickerHtml(periodNet, prevNet, false);
 
-  // Bars HTML: Show Top 6 for visual clarity
-  const barsHtml = catStats
-    .slice(0, 6)
+  // 4a. Group small categories for visualization (< 3%)
+  const totalVal = vizMonthsData[currentKey].reduce((sum, t) => sum + (parseFloat(t.amount) < 0 ? Math.abs(parseFloat(t.amount)) : 0), 0);
+  let otherAmt = 0;
+  
+  const groupedStats = [];
+  catStats.forEach(c => { // catStats is sorted by total descending
+    const pct = totalVal > 0 ? (c.amount / totalVal) * 100 : 0; // Changed c.total to c.amount
+    if (pct < 3 && c.name !== "Other") {
+      otherAmt += c.amount; // Changed c.total to c.amount
+    } else {
+      groupedStats.push(c);
+    }
+  });
+  
+  // Find or create "Other" category
+  if (otherAmt > 0) {
+    const existingOther = groupedStats.find(c => c.name === "Other");
+    if (existingOther) {
+      existingOther.amount += otherAmt; // Changed existingOther.total to existingOther.amount
+      // Re-calculate delta/pct for Other if needed (simplified for now: just update total and re-calc pct)
+      existingOther.pctOfTotal = (existingOther.amount / totalVal) * 100; // Changed existingOther.total to existingOther.amount
+    } else {
+      groupedStats.push({
+        name: "Other",
+        amount: otherAmt, // Changed total to amount
+        pctOfTotal: (otherAmt / totalVal) * 100,
+        delta: 0, // Delta hard to calc for aggregated, treat as neutral
+        prevAmount: 0 // Simplification
+      });
+    }
+  }
+  
+  // Re-sort to ensure Other is at end or sorted by size
+  groupedStats.sort((a, b) => b.amount - a.amount); // Changed b.total - a.total to b.amount - a.amount
+  
+  // 5. Render Visualization Bar (Glassmorphism Segments)
+  const barsHtml = groupedStats
     .map((c) => {
       const color = getCategoryColor(c.name);
-      return `<div class="viz-segment" style="width: ${c.pctOfTotal}%; background: ${color}" title="${c.name}"></div>`;
+      // Use flex-grow for sizing to handle gaps gracefully without overflow
+      return `<div class="viz-segment" style="flex: ${c.pctOfTotal} 1 0px; background: ${color}" title="${c.name}"></div>`;
     })
     .join("");
 
-  // Legend/Grid HTML: Show ALL categories
-  const legendHtml = catStats
+  // Legend/Grid HTML: Show ALL categories (grouped list)
+  const legendHtml = groupedStats
     .map((c, i) => {
       const color = getCategoryColor(c.name);
       
@@ -319,7 +370,7 @@ function renderVizForMonth(monthIndex) {
 
       <div class="stat-cards-row">
         <div class="stat-card">
-          <span class="stat-card-label">Expenses</span>
+          <span class="stat-card-label">Spending</span>
           <div class="stat-card-row">
             <span class="stat-card-value">${formatCurrency(periodExpense, true)}</span>
             ${expenseTickerHtml}
@@ -347,7 +398,7 @@ function renderVizForMonth(monthIndex) {
 
       <div class="viz-bar-container">
         ${barsHtml}
-        <div class="viz-segment" style="flex:1; background: #e7e5e4;" title="Other"></div>
+
       </div>
 
       <div class="viz-legend">
@@ -361,6 +412,11 @@ function renderVizForMonth(monthIndex) {
 
 function onVizMonthChange(monthIndexStr) {
   vizCurrentMonthIndex = parseInt(monthIndexStr, 10);
+  
+  // Persist selection
+  const selectedKey = vizSortedMonthKeys[vizCurrentMonthIndex];
+  localStorage.setItem("breadwinner_month_pref", selectedKey);
+  
   renderVizForMonth(vizCurrentMonthIndex);
 }
 
