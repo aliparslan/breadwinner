@@ -66,6 +66,7 @@ body {
   max-width: 400px; margin: 10vh auto 0; padding: 30px;
   background: var(--bg-card); border-radius: 16px;
   box-shadow: 0 10px 40px -10px rgba(0,0,0,0.08);
+  border: 1px solid var(--border); /* Added border for better contrast */
   text-align: center;
 }
 .auth-container h1 {
@@ -110,18 +111,6 @@ input[type="number"]::-webkit-outer-spin-button {
 }
 input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
 
-/* Safari/Mobile Date Fix */
-input[type="date"] {
-  -webkit-appearance: none;
-  appearance: none;
-  display: block;
-  width: 100%; 
-  max-width: 100%;
-  min-width: 0;
-  box-sizing: border-box;
-  margin: 0 0 8px 0; /* Inherit standard input margin */
-}
-
 /* Input Group - for prefixed inputs like $ */
 .input-group { 
   position: relative; 
@@ -132,15 +121,13 @@ input[type="date"] {
 .input-group .prefix {
   position: absolute; 
   left: 12px; 
-  top: 50%;
-  transform: translateY(-50%); /* Exact center */
+  top: 52%; /* Optical centering fix */
+  transform: translateY(-50%);
   color: var(--text-muted); 
   font-weight: 700; 
   pointer-events: none;
   font-size: 0.95rem;
-  line-height: 1; 
-  display: flex;
-  align-items: center;
+  line-height: normal;
 }
 .input-group input { padding-left: 28px; }
 
@@ -178,11 +165,11 @@ button.secondary:hover {
 /* --- TOGGLE BUTTONS (Modal Toggle - Warm Theme) --- */
 .type-toggle-container {
   display: flex; 
-  background: #fafaf9;
-  padding: 3px; 
-  border-radius: 10px; 
-  margin-bottom: 16px;
-  border: 1px solid var(--border);
+  background: linear-gradient(135deg, #f5f3f1 0%, #ede9e5 100%);
+  padding: 4px; /* Increased padding slightly for the border look */
+  border-radius: 12px; /* Slightly rounder */
+  margin-bottom: 20px;
+  border: 1px solid #d7ccc8; /* Darker border for visibility */
 }
 .type-btn {
   flex: 1; border: none; background: transparent;
@@ -195,6 +182,7 @@ button.secondary:hover {
   background: white; 
   box-shadow: 0 2px 6px rgba(74, 59, 50, 0.1);
   font-weight: 700;
+  border: 1px solid #d7ccc8; /* Added border for better definition */
 }
 #type-income.active { color: var(--accent-green); }
 #type-expense.active { color: var(--primary); }
@@ -426,29 +414,6 @@ button.secondary:hover {
 /* --- CATEGORY LIST --- */
 
 /* --- TABLE (DESKTOP) --- */
-.mobile-chevron-cell { display: none; }
-
-.inline-cat-select {
-  appearance: none;
-  -webkit-appearance: none;
-  background: white;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 4px 8px;
-  font-size: 0.8rem;
-  font-weight: 700;
-  color: var(--text-main);
-  cursor: pointer;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-  font-family: inherit;
-  width: 100%;
-}
-.inline-cat-select:focus {
-  outline: none;
-  border-color: var(--primary);
-  box-shadow: 0 0 0 2px rgba(74, 59, 50, 0.1);
-}
-
 .month-group {
   margin-bottom: 24px;
   border: 1px solid var(--border);
@@ -460,13 +425,14 @@ button.secondary:hover {
   /* Transaction Month Header - Matches email dropdown trigger style */
 .month-header {
   width: calc(100% - 8px); 
-  margin: 4px auto 0; /* Float it inside the card */
+  margin: 4px auto; /* balanced top/bottom margins to 4px */
   font-size: 0.85rem; 
   font-weight: 700;
   font-family: inherit; 
   color: var(--text-secondary);
   text-transform: uppercase; 
-  padding: 12px 20px; /* More breathing room inside */
+  padding: 14px 20px; /* Increased vertical padding equality */
+  line-height: 1; /* Force line-height to 1 to remove font leading issues */
   background: transparent;
   border: 1px solid transparent;
   border-radius: 8px; /* Consistent rounded corners */
@@ -477,7 +443,6 @@ button.secondary:hover {
   text-align: left;
   transition: all 0.2s ease;
   letter-spacing: 0.04em;
-  margin-bottom: 8px;
   outline: none; /* Remove blue browser ring */
 }
 
@@ -663,12 +628,12 @@ tr:hover .actions {
 .modal {
   background: #ffffff;
   padding: 0;
-  border-radius: 20px; /* Slightly rounder for modern feel */
-  width: 100%; max-width: 420px;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  border-radius: 20px; /* More rounded */
+  width: 100%; max-width: 440px;
+  box-shadow: 0 20px 60px -10px rgba(74, 59, 50, 0.3);
   position: relative;
   max-height: 90vh; overflow-y: auto;
-  border: 1px solid var(--border);
+  border: 1px solid #e7dfd9;
   transform: translateY(0);
   animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
@@ -958,7 +923,7 @@ tr:hover .actions {
 
   /* Amount - Fixed to right */
   td:nth-child(4) {
-    font-size: 0.95rem; /* Changed from 0.9rem to 0.95rem */
+    font-size: 0.9rem;
     font-weight: 750;
     white-space: nowrap;
     text-align: right;
@@ -967,15 +932,7 @@ tr:hover .actions {
     padding: 0 4px 0 0; /* Small right padding */
     margin-left: auto; /* Push to far right if flex spacing behaves oddly */
     min-width: unset; /* Remove min-width to avoid overflow */
-  }
 
-  /* Mobile Chevron */
-  .mobile-chevron-cell {
-    display: flex !important;
-    align-items: center;
-    justify-content: flex-end;
-    padding: 0 0 0 8px; 
-    width: auto;
   }
 
   /* Actions - hidden */
@@ -1368,6 +1325,9 @@ tr:hover .actions {
   height: 100%;
   border-radius: 0; /* Rectangular by default */
   transition: all 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.1); /* Subtle shadow on the segments */
+  margin-right: 3px; /* Consistent gap matching outer padding */
+  cursor: pointer; /* Clickable */
 }
 .viz-segment:first-child {
   border-top-left-radius: 8px; /* inner radius (12-4ish) */
@@ -1403,10 +1363,11 @@ tr:hover .actions {
   gap: 10px;
   box-shadow: 0 1px 2px rgba(0,0,0,0.05);
   transition: all 0.2s ease;
+  cursor: pointer; /* Clickable */
 }
 .viz-item:hover {
-  border-color: var(--primary);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  border-color: var(--primary); /* Darker outline for clarity */
+  box-shadow: 0 4px 12px rgba(74, 59, 50, 0.15);
 }
 
 .viz-color-pill {

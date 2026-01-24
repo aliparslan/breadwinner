@@ -71,6 +71,49 @@ function applyFilters() {
 document.getElementById("filter-search").addEventListener("input", debounce(applyFilters, 300));
 document.getElementById("filter-category").addEventListener("change", applyFilters);
 
+// Global helper for visualization clicks
+window.filterByCategoryAndScroll = function(categoryName) {
+  const select = document.getElementById("filter-category");
+  if (!select) return;
+  
+  // Find the option
+  let found = false;
+  for (let i = 0; i < select.options.length; i++) {
+    if (select.options[i].value === categoryName) {
+      select.selectedIndex = i;
+      found = true;
+      break;
+    }
+  }
+
+  if (!found) {
+    // If it's "Other", it might be an aggregation, so just warn
+    if (categoryName === "Other") {
+       showToast("Cannot filter by 'Other' group", "error");
+    } else {
+       // Try to find case-insensitive match just in case
+       for (let i = 0; i < select.options.length; i++) {
+         if (select.options[i].value.toLowerCase() === categoryName.toLowerCase()) {
+           select.selectedIndex = i;
+           found = true;
+           break;
+         }
+       }
+       if (!found) showToast("Category not found in filter", "error");
+    }
+    if (!found) return;
+  }
+  
+  applyFilters();
+  
+  const target = document.querySelector(".transactions-header");
+  if (target) {
+     target.scrollIntoView({ behavior: "smooth" });
+  } else {
+     document.getElementById("tx-table-container")?.scrollIntoView({ behavior: "smooth" });
+  }
+};
+
 // --- MONTHLY VIZ LOGIC ---
 let vizMonthsData = {}; // Global store for month data
 let vizSortedMonthKeys = []; // Sorted month keys
@@ -298,7 +341,7 @@ function renderVizForMonth(monthIndex) {
     .map((c) => {
       const color = getCategoryColor(c.name);
       // Use flex-grow for sizing to handle gaps gracefully without overflow
-      return `<div class="viz-segment" style="flex: ${c.pctOfTotal} 1 0px; background: ${color}; cursor: pointer;" title="Filter by ${c.name}" onclick="filterByVizCategory('${c.name}')"></div>`;
+      return `<div class="viz-segment" style="flex: ${c.pctOfTotal} 1 0px; background: ${color}" title="${c.name}" onclick="filterByCategoryAndScroll('${c.name.replace(/'/g, "\\'")}')"></div>`;
     })
     .join("");
 
@@ -337,7 +380,7 @@ function renderVizForMonth(monthIndex) {
       const pillStyle = `background: ${color}`;
 
       return `
-        <div class="viz-item" style="cursor: pointer;" onclick="filterByVizCategory('${c.name}')" title="Filter by ${c.name}">
+        <div class="viz-item" onclick="filterByCategoryAndScroll('${c.name.replace(/'/g, "\\'")}')">
           <div class="viz-color-pill" style="${pillStyle}"></div>
           <div class="viz-info">
             <div class="viz-row-top">
@@ -420,18 +463,6 @@ function onVizMonthChange(monthIndexStr) {
   renderVizForMonth(vizCurrentMonthIndex);
 }
 
-function filterByVizCategory(name) {
-  const select = document.getElementById("filter-category");
-  if (name === "Other") return; 
-
-  select.value = name;
-  applyFilters();
-  
-  document.getElementById("tx-table-container").scrollIntoView({ behavior: "smooth" });
-}
-
-
-
 function renderDashboard(transactions) {
   // Render the monthly viz (includes summary stats now)
   renderMonthlyViz(allTransactions);
@@ -479,7 +510,7 @@ function renderDashboard(transactions) {
         </button>
         <div class="month-content ${hiddenClass}">
           <table>
-             <thead class="desktop-thead"><tr><th>Date</th><th>Description</th><th>Category</th><th>Amount</th></tr></thead>
+             <thead><tr><th>Date</th><th>Description</th><th>Category</th><th>Amount</th></tr></thead>
              <tbody>${rows}</tbody>
           </table>
         </div>
@@ -498,17 +529,8 @@ function renderRow(tx) {
     <tr onclick="openEdit(${tx.id})" style="cursor: pointer; --category-color: ${categoryColor};" tabindex="0" role="button" aria-label="Edit ${desc}">
       <td>${formatDate(tx.date)}</td>
       <td>${desc}</td>
-      <td id="cat-cell-${tx.id}">
-        <span class="category-badge" style="${pillStyle}" onclick="quickEditCategory(event, ${tx.id}, ${tx.category_id})">
-          ${tx.categoryName}
-        </span>
-      </td>
+      <td><span class="category-badge" style="${pillStyle}">${tx.categoryName}</span></td>
       <td style="color:${isNeg ? "var(--text-main)" : "var(--accent-green)"}">${formatCurrency(Math.abs(tx.amount))}</td>
-      <td class="mobile-chevron-cell">
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-          <polyline points="9 18 15 12 9 6"></polyline>
-        </svg>
-      </td>
     </tr>`;
 }
 
@@ -620,72 +642,7 @@ function renderCats(sel) {
 
 function closeModal() {
   document.getElementById("edit-modal").classList.add("hidden");
-  currentEditId = null;
 }
-
-// --- INLINE EDITING ---
-function quickEditCategory(event, txId, currentCatId) {
-  // Only allow on Desktop (check window width or just let CSS handle visibility issues?)
-  // Actually, user requested "specific to desktop". On mobile, click usually opens modal.
-  // We can use the event to stop propagation.
-  if (window.innerWidth < 768) return; // Allow normal modal open on mobile
-
-  event.stopPropagation(); // Stop row click
-  
-  const cell = document.getElementById(`cat-cell-${txId}`);
-  const originalHtml = cell.innerHTML;
-
-  // Build select
-  const options = allCategories.map(c => 
-    `<option value="${c.id}" ${c.id == currentCatId ? "selected" : ""}>${c.name}</option>`
-  ).join("");
-  
-  cell.innerHTML = `
-    <select class="inline-cat-select" onchange="saveQuickCategory(this, ${txId})" onclick="event.stopPropagation()" onblur="cancelQuickEdit(this, '${escapeHtml(originalHtml)}')">
-      ${options}
-    </select>
-  `;
-  
-  // Focus immediately
-  const select = cell.querySelector("select");
-  select.focus();
-}
-
-function escapeHtml(text) {
-  return text.replace(/'/g, "&apos;").replace(/"/g, "&quot;");
-}
-
-function cancelQuickEdit(select, originalHtml) {
-  // Timeout to allow onchange to fire first if selecting new value
-  setTimeout(() => {
-    // Check if the element is still there (might have been replaced by save)
-    if (select.parentNode) {
-       select.parentNode.innerHTML = originalHtml; // Revert
-       // Note: originalHtml needs to be unescaped ideally, but innerHTML set is robust enough usually
-    }
-  }, 200); 
-}
-
-async function saveQuickCategory(select, txId) {
-  const newCatId = select.value;
-  // Visual Feedback immediately?
-  // We'll let the re-render handle it.
-  
-  showToast("Updating category...", "loading");
-  
-  const { error } = await client.from("transactions").update({ category_id: newCatId }).eq("id", txId);
-  
-  if (error) {
-    showToast("Update failed", "error");
-    // Revert visual handled by refresh or cancel
-  } else {
-    showToast("Category updated", "success");
-    // Refresh data
-    // Optimistic update would be better, but fetching is fast enough
-    await fetchTransactions(); 
-  }
-}
-
 
 // Delete directly from modal without confirmation
 async function deleteFromModal() {
