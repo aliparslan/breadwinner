@@ -140,17 +140,10 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
     const genAI = new GoogleGenerativeAI(activeApiKey);
     const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
 
-    // Calculate category percentages for the prompt
-    const categoryPercentages = Object.entries(categoryTotals)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 4)
-      .map(([name, total]) => `${name}: ${((total / totalExpenses) * 100).toFixed(0)}%`)
-      .join(", ");
+
 
     // Calculate additional metrics for behavioral insights
     const txCount = transactions.length;
-    const avgTransaction = txCount > 0 ? (totalExpenses / monthlyTotals[Object.keys(monthlyTotals)[0]]?.expenses || 1) : 0; // Rough avg estimate or just use total/count
-    const simpleAvg = txCount > 0 ? (totalExpenses + totalIncome) / txCount : 0; // Very rough
     
     // Find largest single transaction
     const largestTx = transactions.reduce((max: any, t: any) => 

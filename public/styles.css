@@ -93,7 +93,7 @@ body {
 
 
 /* --- AUTH --- */
-/* .auth-container definition moved to line 47 */
+
 .auth-container h1 {
   font-size: 2rem; margin-bottom: 0.25rem; color: var(--primary); font-weight: 800;
 }
