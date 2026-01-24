@@ -2,7 +2,7 @@
 
 :root {
   /* --- PREMIUM COCOA THEME --- */
-  --bg-body: #fffbf7; /* Very Light Warm White */
+  --bg-body: #fbf8f5; /* Slightly Darker Warm White */
   --bg-card: #ffffff;
   
   /* Typography */
@@ -35,10 +35,33 @@ body {
   padding: 0;
   -webkit-font-smoothing: antialiased;
   line-height: 1.5;
-  overflow-x: hidden; /* Prevent horizontal scroll */
+  overflow-x: hidden;
   display: flex;
   flex-direction: column;
   min-height: 100vh;
+  min-height: 100dvh; /* Use dynamic viewport height for mobile browsers */
+}
+
+/* ... (skip to inputs) ... */
+
+input, select {
+  width: 100%; padding: 10px 12px;
+  background: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 0.95rem; color: var(--text-main);
+  box-sizing: border-box; margin-bottom: 0;
+  font-family: inherit; font-weight: 500;
+  transition: all 0.2s ease;
+  -webkit-appearance: none; /* Remove native iOS styling */
+  appearance: none;
+}
+
+/* Prevent auto-zoom on iOS by forcing 16px font on mobile inputs */
+@media screen and (max-width: 600px) {
+  input, select, textarea {
+    font-size: 16px !important; 
+  }
 }
 
 /* ... */
@@ -53,7 +76,7 @@ body {
   background: var(--bg-card); 
   border-radius: 24px;
   box-shadow: 0 30px 60px -15px rgba(0,0,0,0.1);
-  border: 1px solid var(--border);
+  border: 1.5px solid var(--border);
   text-align: center;
   
   /* Flex Centering (Robust against footer overlap) */
@@ -116,16 +139,7 @@ body {
   color: var(--accent-red); margin-top: 12px; font-size: 0.9rem;
 }
 
-input, select {
-  width: 100%; padding: 10px 12px; /* Compact */
-  background: #ffffff;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  font-size: 0.95rem; color: var(--text-main);
-  box-sizing: border-box; margin-bottom: 0; /* Let label handle spacing */
-  font-family: inherit; font-weight: 500;
-  transition: all 0.2s ease;
-}
+
 input:focus, select:focus {
   background: #fff; border-color: var(--primary); outline: none;
   box-shadow: 0 0 0 3px rgba(74, 59, 50, 0.1);
@@ -1550,7 +1564,8 @@ tr:hover .actions {
 /* Footer */
 .site-footer {
   text-align: center;
-  padding: 24px 0 40px;
+  padding: 24px 0 40px; /* Base padding */
+  padding-bottom: env(safe-area-inset-bottom, 40px); /* Adjust for iPhone home bar */
   color: var(--text-muted);
   font-size: 0.8rem;
   font-weight: 500;

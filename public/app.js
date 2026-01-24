@@ -65,7 +65,9 @@ function applyFilters() {
     return matchesSearch && matchesCat;
   });
 
-  renderDashboard(filtered);
+  // If the user is filtering (search or category), force expand months to show results
+  const isFiltering = cat !== "all" || search.length > 0;
+  renderDashboard(filtered, isFiltering);
 }
 
 document.getElementById("filter-search").addEventListener("input", debounce(applyFilters, 300));
@@ -498,7 +500,7 @@ function onVizMonthChange(monthIndexStr) {
   renderVizForMonth(vizCurrentMonthIndex);
 }
 
-function renderDashboard(transactions) {
+function renderDashboard(transactions, forceExpand = false) {
   // Render the monthly viz (includes summary stats now)
   renderMonthlyViz(allTransactions);
 
@@ -532,7 +534,10 @@ function renderDashboard(transactions) {
       // Check localStorage for saved state, default to collapsed
       const monthKey = month.replace(/\s+/g, '-');
       const savedState = localStorage.getItem(`month-${monthKey}`);
-      const isExpanded = savedState === 'true'; // Default false (collapsed)
+      
+      // Expand if forced (filtering) OR if explicitly saved as expanded
+      // If we are forcing expand (filtering), we show it, but DO NOT overwrite the saved preference yet.
+      const isExpanded = forceExpand || savedState === 'true'; 
       const hiddenClass = isExpanded ? '' : 'hidden';
 
       return `
