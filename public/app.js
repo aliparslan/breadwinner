@@ -120,6 +120,65 @@ let vizSortedMonthKeys = []; // Sorted month keys
 let vizCurrentMonthIndex = 0; // Track currently selected month
 let vizAllTransactions = []; // Store all transactions for income/expense calculations
 
+// --- TOOLTIP LOGIC ---
+let tooltipEl = null;
+
+function showVizTooltip(e, content) {
+  if (!tooltipEl) {
+    tooltipEl = document.createElement("div");
+    tooltipEl.className = "viz-tooltip";
+    document.body.appendChild(tooltipEl);
+  }
+  
+  if (!content) return;
+  
+  tooltipEl.innerHTML = content;
+  tooltipEl.classList.add("visible");
+  moveVizTooltip(e);
+}
+
+function moveVizTooltip(e) {
+  if (!tooltipEl) return;
+  const x = e.clientX;
+  const y = e.clientY;
+  
+  // Prevent overflow on right edge
+  const rect = tooltipEl.getBoundingClientRect();
+  const winWidth = window.innerWidth;
+  
+  let left = x;
+  if (x + rect.width / 2 > winWidth - 10) {
+    left = winWidth - rect.width / 2 - 10;
+  } else if (x - rect.width / 2 < 10) {
+    left = rect.width / 2 + 10;
+  }
+  
+  tooltipEl.style.left = `${left}px`;
+  tooltipEl.style.top = `${y}px`;
+  
+  // Flip if too close to top
+  // Default is ABOVE (transform: -100% and margin-top: -16px)
+  // If y < rect.height + 20, we should flip to below
+  if (y < rect.height + 30) {
+    tooltipEl.style.transform = "translate(-50%, 0)";
+    tooltipEl.style.marginTop = "20px";
+  } else {
+    tooltipEl.style.transform = "translate(-50%, -100%)";
+    tooltipEl.style.marginTop = "-16px";
+  }
+}
+
+function hideVizTooltip() {
+  if (tooltipEl) {
+    tooltipEl.classList.remove("visible");
+  }
+}
+
+// Attach to window for easier debugging if needed, though not strictly required
+window.showVizTooltip = showVizTooltip;
+window.hideVizTooltip = hideVizTooltip;
+window.moveVizTooltip = moveVizTooltip;
+
 function renderMonthlyViz(transactions) {
   const container = document.getElementById("monthly-viz");
   if (!container) return;
@@ -149,25 +208,20 @@ function renderMonthlyViz(transactions) {
   const monthKeys = Object.keys(vizMonthsData).filter(k => k !== "all").sort().reverse();
   vizSortedMonthKeys = ["all", ...monthKeys];
   
-  // Default Preference Logic:
-  // 1. Try to load from localStorage
-  // 2. If not found, default to most recent month (index 1) if available
-  // 3. Fallback to All Time (index 0)
+  // Default Preference Logic
   const storedMonth = localStorage.getItem("breadwinner_month_pref");
-  let defaultIndex = 1; // Default to most recent month (index 1 usually, since 0 is 'all')
+  let defaultIndex = 1; 
   
   if (storedMonth) {
      const foundIndex = vizSortedMonthKeys.indexOf(storedMonth);
      if (foundIndex >= 0) defaultIndex = foundIndex;
   }
   
-  // Safety check: if only "all" exists or defaultIndex out of bounds
   if (defaultIndex >= vizSortedMonthKeys.length) defaultIndex = 0;
-  
   vizCurrentMonthIndex = defaultIndex;
   
-  renderVizForMonth(vizCurrentMonthIndex);
   container.classList.remove("hidden");
+  renderVizForMonth(vizCurrentMonthIndex);
 }
 
 function renderVizForMonth(monthIndex) {
@@ -176,15 +230,16 @@ function renderVizForMonth(monthIndex) {
 
   const currentKey = vizSortedMonthKeys[monthIndex];
   const isAllTime = currentKey === "all";
-  
-  // For comparison: if All Time, no comparison. Otherwise compare to previous month
   const prevKey = isAllTime ? null : vizSortedMonthKeys[monthIndex + 1];
 
-  // 3. Current Period Stats (expenses)
+  // 3. Current Period Stats
   const currentTxs = vizMonthsData[currentKey];
+  // Safety check
+  if (!currentTxs) return;
+
   const currentTotal = currentTxs.reduce((sum, t) => sum + Math.abs(parseFloat(t.amount)), 0);
 
-  // Calculate Income/Expense/Net for selected period
+  // Income/Expense/Net for current period
   let periodIncome = 0, periodExpense = 0;
   const periodTransactions = isAllTime 
     ? vizAllTransactions 
@@ -197,7 +252,7 @@ function renderVizForMonth(monthIndex) {
   });
   const periodNet = periodIncome - periodExpense;
 
-  // 4. Previous Month Stats (for delta)
+  // 4. Previous Month Stats (for comparison)
   let prevTotal = 0;
   let prevCatTotals = {};
   if (prevKey && prevKey !== "all") {
@@ -210,19 +265,13 @@ function renderVizForMonth(monthIndex) {
     }
   }
 
-  // 5. Total Delta
-  let totalDeltaPct = 0;
-  if (prevTotal > 0) {
-    totalDeltaPct = ((currentTotal - prevTotal) / prevTotal) * 100;
-  }
-
-  // 6. Category Breakdown for Current Period
+  // 5. Category Breakdown
   const currentCatTotals = {};
   currentTxs.forEach((t) => {
     currentCatTotals[t.categoryName] = (currentCatTotals[t.categoryName] || 0) + Math.abs(parseFloat(t.amount));
   });
 
-  // Prepare Array for sorting
+  // Full Breakdown (for Legend)
   let catStats = Object.keys(currentCatTotals).map((name) => {
     const amt = currentCatTotals[name];
     const prevAmt = prevCatTotals[name] || 0;
@@ -232,17 +281,50 @@ function renderVizForMonth(monthIndex) {
     return {
       name,
       amount: amt,
-      pctOfTotal: (amt / currentTotal) * 100,
+      pctOfTotal: currentTotal > 0 ? (amt / currentTotal) * 100 : 0,
       delta: deltaPct,
       prevAmount: prevAmt
     };
   });
-
-  // Sort by Amount Descending
   catStats.sort((a, b) => b.amount - a.amount);
 
-  // 7. Generate HTML
-  // Build month dropdown options
+  // Grouped Breakdown (for Bar) - Groups < 3% into "Other"
+  const totalVal = currentTotal;
+  const barStats = [];
+  let otherAmt = 0;
+  let otherIncluded = [];
+
+  catStats.forEach(c => {
+    const pct = totalVal > 0 ? (c.amount / totalVal) * 100 : 0;
+    if (pct < 3 && c.name !== "Other") {
+      otherAmt += c.amount;
+      otherIncluded.push(c);
+    } else {
+      barStats.push(c);
+    }
+  });
+  
+  if (otherAmt > 0) {
+    const existingOther = barStats.find(c => c.name === "Other");
+    if (existingOther) {
+      existingOther.amount += otherAmt;
+      existingOther.pctOfTotal = (existingOther.amount / totalVal) * 100;
+      if (!existingOther.included) existingOther.included = [];
+      existingOther.included.push(...otherIncluded);
+    } else {
+      barStats.push({
+        name: "Other",
+        amount: otherAmt,
+        pctOfTotal: (otherAmt / totalVal) * 100,
+        delta: 0,
+        prevAmount: 0,
+        included: otherIncluded
+      });
+    }
+  }
+  barStats.sort((a, b) => b.amount - a.amount);
+
+  // 6. Generate HTML
   const monthDropdownOptions = vizSortedMonthKeys.map((key, idx) => {
     let displayName;
     if (key === "all") {
@@ -254,134 +336,105 @@ function renderVizForMonth(monthIndex) {
     return `<option value="${idx}" ${idx === monthIndex ? 'selected' : ''}>${displayName}</option>`;
   }).join("");
 
-  // Calculate deltas for all 3 stats (only for specific months, not All Time)
-  let prevIncome = 0, prevExpense = 0, prevNet = 0;
+  // Ticker Prev Values
+  let prevIncomeVal = 0, prevExpenseVal = 0, prevNetVal = 0;
   if (prevKey && prevKey !== "all") {
     const prevPeriodTxs = vizAllTransactions.filter(t => t.date.startsWith(prevKey));
     prevPeriodTxs.forEach(tx => {
       const amt = parseFloat(tx.amount);
-      if (amt > 0) prevIncome += amt;
-      else prevExpense += Math.abs(amt);
+      if (amt > 0) prevIncomeVal += amt;
+      else prevExpenseVal += Math.abs(amt);
     });
-    prevNet = prevIncome - prevExpense;
+    prevNetVal = prevIncomeVal - prevExpenseVal;
   }
 
-  // Helper to generate ticker HTML
-  // Helper to generate ticker HTML
   function getTickerHtml(current, prev, invertColors = false) {
     if (isAllTime) return ''; 
-    
-    // Handle new case
     if (prev === 0) {
       if (current > 0) return `<span class="stat-card-ticker" style="color: var(--text-muted)">New</span>`;
       return '';
     }
-
     const deltaPct = ((current - prev) / prev) * 100;
-    
-    // Handle small/no change
-    if (Math.abs(deltaPct) < 0.1) {
-       return `<span class="stat-card-ticker" style="color: var(--text-muted)">—</span>`;
-    }
-
+    if (Math.abs(deltaPct) < 0.1) return `<span class="stat-card-ticker" style="color: var(--text-muted)">—</span>`;
     const isUp = deltaPct > 0;
-    // For expenses: up is bad (red), down is good (green)
-    // For income/net: up is good (green), down is bad (red)
     const upColor = invertColors ? 'var(--accent-red)' : 'var(--accent-green)';
     const downColor = invertColors ? 'var(--accent-green)' : 'var(--accent-red)';
     const color = isUp ? upColor : downColor;
     const arrow = isUp ? '▲' : '▼';
-    const absDelta = Math.abs(deltaPct);
-    const fractionDigits = absDelta >= 1000 ? 0 : 1;
-    const fmtPct = new Intl.NumberFormat('en-US', { minimumFractionDigits: fractionDigits, maximumFractionDigits: fractionDigits }).format(absDelta);
+    const fmtPct = new Intl.NumberFormat('en-US', { minimumFractionDigits: Math.abs(deltaPct) >= 1000 ? 0 : 1, maximumFractionDigits: Math.abs(deltaPct) >= 1000 ? 0 : 1 }).format(Math.abs(deltaPct));
     return `<span class="stat-card-ticker" style="color: ${color}">${arrow} ${fmtPct}%</span>`;
   }
 
-  const expenseTickerHtml = getTickerHtml(periodExpense, prevExpense, true); // Invert: up is bad
-  const incomeTickerHtml = getTickerHtml(periodIncome, prevIncome, false);
-  const netTickerHtml = getTickerHtml(periodNet, prevNet, false);
-
-  // 4a. Group small categories for visualization (< 3%)
-  const totalVal = vizMonthsData[currentKey].reduce((sum, t) => sum + (parseFloat(t.amount) < 0 ? Math.abs(parseFloat(t.amount)) : 0), 0);
-  let otherAmt = 0;
-  
-  const groupedStats = [];
-  catStats.forEach(c => { // catStats is sorted by total descending
-    const pct = totalVal > 0 ? (c.amount / totalVal) * 100 : 0; // Changed c.total to c.amount
-    if (pct < 3 && c.name !== "Other") {
-      otherAmt += c.amount; // Changed c.total to c.amount
-    } else {
-      groupedStats.push(c);
-    }
-  });
-  
-  // Find or create "Other" category
-  if (otherAmt > 0) {
-    const existingOther = groupedStats.find(c => c.name === "Other");
-    if (existingOther) {
-      existingOther.amount += otherAmt; // Changed existingOther.total to existingOther.amount
-      // Re-calculate delta/pct for Other if needed (simplified for now: just update total and re-calc pct)
-      existingOther.pctOfTotal = (existingOther.amount / totalVal) * 100; // Changed existingOther.total to existingOther.amount
-    } else {
-      groupedStats.push({
-        name: "Other",
-        amount: otherAmt, // Changed total to amount
-        pctOfTotal: (otherAmt / totalVal) * 100,
-        delta: 0, // Delta hard to calc for aggregated, treat as neutral
-        prevAmount: 0 // Simplification
-      });
-    }
-  }
-  
-  // Re-sort to ensure Other is at end or sorted by size
-  groupedStats.sort((a, b) => b.amount - a.amount); // Changed b.total - a.total to b.amount - a.amount
-  
-  // 5. Render Visualization Bar (Glassmorphism Segments)
-  const barsHtml = groupedStats
-    .map((c) => {
-      const color = getCategoryColor(c.name);
-      // Use flex-grow for sizing to handle gaps gracefully without overflow
-      return `<div class="viz-segment" style="flex: ${c.pctOfTotal} 1 0px; background: ${color}" title="${c.name}" onclick="filterByCategoryAndScroll('${c.name.replace(/'/g, "\\'")}')"></div>`;
-    })
-    .join("");
-
-  // Legend/Grid HTML: Show ALL categories (grouped list)
-  const legendHtml = groupedStats
-    .map((c, i) => {
-      const color = getCategoryColor(c.name);
+  const barsHtml = barStats.map((c) => {
+      const color = c.name === "Other" ? "#d6d3d1" : getCategoryColor(c.name); 
+      let tooltipContent = "";
+      const amtStr = formatCurrency(c.amount, true);
+      const pctStr = c.pctOfTotal.toFixed(1) + "%";
       
-      // Determine delta display
-      let deltaStr, deltaColor;
-      if (isAllTime) {
-         deltaStr = ""; // No badges for All Time
-         deltaColor = "transparent";
-      } else if (c.prevAmount === 0) {
-        deltaStr = "New";
-        deltaColor = "var(--text-muted)";
-      } else if (Math.abs(c.delta) < 0.1) {
-        deltaStr = "—";
-        deltaColor = "var(--text-muted)";
+      if (c.name === "Other" && c.included && c.included.length > 0) {
+        c.included.sort((a,b) => b.amount - a.amount);
+        const rows = c.included.map(sub => {
+          const subPct = totalVal > 0 ? (sub.amount / totalVal) * 100 : 0;
+          return `
+          <div class="viz-tooltip-row">
+            <span>${sub.name}</span>
+            <span>${subPct.toFixed(1)}%</span>
+            <!-- <span>${formatCurrency(sub.amount, true)}</span> -->
+          </div>
+        `}).join("");
+        tooltipContent = `
+          <div class="viz-tooltip-header" style="gap: 12px;">
+            <span>Other Categories</span>
+            <span class="amt">${amtStr}</span>
+          </div>
+          <div class="viz-tooltip-list">
+            ${rows}
+          </div>
+        `;
       } else {
-        const absDelta = Math.abs(c.delta);
-        const fractionDigits = absDelta >= 1000 ? 0 : 1;
-        
-        if (c.delta > 0) {
-          const fmtDelta = new Intl.NumberFormat('en-US', { minimumFractionDigits: fractionDigits, maximumFractionDigits: fractionDigits }).format(c.delta);
-          deltaStr = `▲ ${fmtDelta}%`;
-          deltaColor = "var(--accent-red)";
-        } else {
-          const fmtDelta = new Intl.NumberFormat('en-US', { minimumFractionDigits: fractionDigits, maximumFractionDigits: fractionDigits }).format(absDelta);
-          deltaStr = `▼ ${fmtDelta}%`;
-          deltaColor = "var(--accent-green)";
-        }
+        tooltipContent = `
+          <div class="viz-tooltip-header">
+            <span>${c.name}</span>
+            <span class="amt">${amtStr}</span>
+          </div>
+          <div class="viz-tooltip-row">
+            <span>Share</span>
+            <span>${pctStr}</span>
+          </div>
+        `;
       }
 
-      // Always use the category color for the pill (not gray)
-      const pillStyle = `background: ${color}`;
+      const safeTooltip = tooltipContent.replace(/"/g, '&quot;');
+      
+      return `<div class="viz-segment" 
+           style="flex: ${c.pctOfTotal} 1 0px; background: ${color}" 
+           data-tooltip-html="${safeTooltip}"
+           onclick="filterByCategoryAndScroll('${c.name.replace(/'/g, "\\'")}')"
+           onmouseenter="showVizTooltip(event, this.getAttribute('data-tooltip-html'))"
+           onmousemove="moveVizTooltip(event)"
+           onmouseleave="hideVizTooltip()"
+           ></div>`;
+    }).join("");
+
+  const legendHtml = catStats.map((c) => {
+      const color = getCategoryColor(c.name);
+      let deltaStr, deltaColor;
+      if (isAllTime) {
+         deltaStr = ""; deltaColor = "transparent";
+      } else if (c.prevAmount === 0) {
+        deltaStr = "New"; deltaColor = "var(--text-muted)";
+      } else if (Math.abs(c.delta) < 0.1) {
+        deltaStr = "—"; deltaColor = "var(--text-muted)";
+      } else {
+        const absDelta = Math.abs(c.delta);
+        const fmtDelta = new Intl.NumberFormat('en-US', { minimumFractionDigits: absDelta >= 1000 ? 0 : 1, maximumFractionDigits: absDelta >= 1000 ? 0 : 1 }).format(c.delta);
+        deltaStr = (c.delta > 0 ? "▲ " : "▼ ") + fmtDelta + "%";
+        deltaColor = c.delta > 0 ? "var(--accent-red)" : "var(--accent-green)";
+      }
 
       return `
         <div class="viz-item" onclick="filterByCategoryAndScroll('${c.name.replace(/'/g, "\\'")}')">
-          <div class="viz-color-pill" style="${pillStyle}"></div>
+          <div class="viz-color-pill" style="background: ${color}"></div>
           <div class="viz-info">
             <div class="viz-row-top">
               <span class="viz-cat-name">${c.name}</span>
@@ -394,63 +447,45 @@ function renderVizForMonth(monthIndex) {
           </div>
         </div>
       `;
-    })
-    .join("");
+    }).join("");
 
-  const html = `
+  container.innerHTML = `
     <div class="viz-card">
       <div class="viz-header">
         <div class="viz-month-container">
           <span class="viz-month-text">${isAllTime ? "All Time" : new Date(parseInt(currentKey.split("-")[0]), parseInt(currentKey.split("-")[1]) - 1).toLocaleString("default", { month: "long", year: "numeric" })}</span>
-          <svg class="viz-month-arrow-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-            <polyline points="6 9 12 15 18 9"></polyline>
-          </svg>
-          <select id="viz-month-dropdown" class="viz-month-overlay" onchange="onVizMonthChange(this.value)">
-            ${monthDropdownOptions}
-          </select>
+          <svg class="viz-month-arrow-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+          <select id="viz-month-dropdown" class="viz-month-overlay" onchange="onVizMonthChange(this.value)">${monthDropdownOptions}</select>
         </div>
       </div>
-
       <div class="stat-cards-row">
         <div class="stat-card">
           <span class="stat-card-label">Spending</span>
           <div class="stat-card-row">
             <span class="stat-card-value">${formatCurrency(periodExpense, true)}</span>
-            ${expenseTickerHtml}
+            ${getTickerHtml(periodExpense, prevExpenseVal, true)}
           </div>
         </div>
         <div class="stat-card">
           <span class="stat-card-label">Income</span>
           <div class="stat-card-row">
             <span class="stat-card-value positive">${formatCurrency(periodIncome, true)}</span>
-            ${incomeTickerHtml}
+            ${getTickerHtml(periodIncome, prevIncomeVal, false)}
           </div>
         </div>
         <div class="stat-card">
           <span class="stat-card-label">Net</span>
           <div class="stat-card-row">
             <span class="stat-card-value ${periodNet >= 0 ? 'positive' : 'negative'}">${periodNet >= 0 ? '+' : ''}${formatCurrency(periodNet, true)}</span>
-            ${netTickerHtml}
+            ${getTickerHtml(periodNet, prevNetVal, false)}
           </div>
         </div>
       </div>
-
-      <div class="viz-breakdown-header">
-        <span class="viz-breakdown-title">Spending Breakdown</span>
-      </div>
-
-      <div class="viz-bar-container">
-        ${barsHtml}
-
-      </div>
-
-      <div class="viz-legend">
-        ${legendHtml}
-      </div>
+      <div class="viz-breakdown-header"><span class="viz-breakdown-title">Spending Breakdown</span></div>
+      <div class="viz-bar-container">${barsHtml}</div>
+      <div class="viz-legend">${legendHtml}</div>
     </div>
   `;
-
-  container.innerHTML = html;
 }
 
 function onVizMonthChange(monthIndexStr) {
@@ -844,15 +879,21 @@ document.getElementById("refresh-insights-btn")?.addEventListener("click", () =>
 
 async function checkUser() {
   toggleLoading(true);
-  const {
-    data: { session },
-  } = await client.auth.getSession();
-  updateUI(session);
-  if (session) {
-    await fetchTransactions();
-    fetchInsights(); // Non-blocking, load in background
+  try {
+    const {
+      data: { session },
+    } = await client.auth.getSession();
+    updateUI(session);
+    if (session) {
+      await fetchTransactions();
+      fetchInsights(); // Non-blocking, load in background
+    }
+  } catch (err) {
+    console.error("Initialization error:", err);
+    showToast("Failed to load application", "error");
+  } finally {
+    toggleLoading(false);
   }
-  toggleLoading(false);
 }
 
 function updateUI(s) {

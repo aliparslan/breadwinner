@@ -423,28 +423,7 @@ button.secondary:hover {
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
 }
   /* Transaction Month Header - Matches email dropdown trigger style */
-.month-header {
-  width: calc(100% - 8px); 
-  margin: 4px auto; /* balanced top/bottom margins to 4px */
-  font-size: 0.85rem; 
-  font-weight: 700;
-  font-family: inherit; 
-  color: var(--text-secondary);
-  text-transform: uppercase; 
-  padding: 14px 20px; /* Increased vertical padding equality */
-  line-height: 1; /* Force line-height to 1 to remove font leading issues */
-  background: transparent;
-  border: 1px solid transparent;
-  border-radius: 8px; /* Consistent rounded corners */
-  display: flex; 
-  align-items: center; /* Fix vertical alignment */
-  justify-content: space-between; 
-  cursor: pointer; 
-  text-align: left;
-  transition: all 0.2s ease;
-  letter-spacing: 0.04em;
-  outline: none; /* Remove blue browser ring */
-}
+/* DEFINITION MOVED TO LINE 711 */
 
 .month-header:hover, .month-header:focus {
   background: rgba(0, 0, 0, 0.04); /* Subtle gray background */
@@ -521,10 +500,14 @@ tbody tr:nth-child(even) {
   background-color: #fafafa;
 }
 tbody tr:hover {
-  background-color: #f5f0eb;
+  background-color: #ffffff;
+  box-shadow: inset 0 0 0 1px var(--primary), 0 4px 12px rgba(74, 59, 50, 0.1);
+  position: relative;
+  z-index: 10;
+  transition: all 0.2s ease;
 }
 tbody tr:active {
-  background-color: #ebe5df;
+  background-color: #f5f0eb;
 }
 td {
   padding: 14px 20px;
@@ -711,6 +694,30 @@ tr:hover .actions {
   opacity: 1;
 }
 
+  /* Transaction Month Header - Matches email dropdown trigger style */
+.month-header {
+  width: calc(100% - 8px); 
+  margin: 4px auto; /* balanced top/bottom margins to 4px */
+  font-size: 0.85rem; 
+  font-weight: 700;
+  font-family: inherit; 
+  color: var(--text-secondary);
+  text-transform: uppercase; 
+  padding: 14px 10px; /* Reduced side padding (was 20px) to align closer to edges */
+  line-height: 1; /* Force line-height to 1 to remove font leading issues */
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 8px; /* Consistent rounded corners */
+  display: flex; 
+  align-items: center; /* Fix vertical alignment */
+  justify-content: space-between; 
+  cursor: pointer; 
+  text-align: left;
+  transition: all 0.2s ease;
+  letter-spacing: 0.04em;
+  outline: none; /* Remove blue browser ring */
+}
+/* ... */
 /* --- TOAST --- */
 #status-toast {
   position: fixed;
@@ -729,6 +736,9 @@ tr:hover .actions {
   z-index: 2000;
   transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
   opacity: 0;
+  width: max-content; /* Allow width to grow */
+  max-width: 90vw; /* Prevent screen overflow */
+  white-space: nowrap; /* Keep on one line if possible */
 }
 #status-toast.show {
   transform: translateX(-50%) translateY(0);
@@ -1343,7 +1353,8 @@ tr:hover .actions {
 }
 /* Use opacity for pastel look */
 .viz-segment:hover {
-  filter: brightness(0.95);
+  filter: brightness(0.8); /* Much darker on hover */
+  transform: scaleY(1.05); /* Slight pop */
 }
 
 /* Legend Grid */
@@ -1499,4 +1510,60 @@ tr:hover .actions {
   font-size: 0.8rem;
   font-weight: 500;
   border-top: 1px solid transparent; /* Keeps spacing consistent */
+}
+
+/* Tooltip Styling */
+.viz-tooltip {
+  position: fixed;
+  background: rgba(255, 255, 255, 0.98); /* Light Mode */
+  color: var(--text-main);
+  padding: 8px 10px; /* Smaller padding */
+  border-radius: 8px;
+  font-size: 0.75rem; /* Smaller text */
+  pointer-events: none;
+  z-index: 10000;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12); /* Softer shadow */
+  opacity: 0;
+  transform: translate(-50%, -100%); /* Position ABOVE the cursor */
+  margin-top: -16px; /* Offset from cursor */
+  min-width: 120px;
+  max-width: 200px;
+  backdrop-filter: blur(4px);
+  border: 1px solid var(--border);
+  transition: opacity 0.1s ease, transform 0.1s ease;
+}
+.viz-tooltip.visible { 
+  opacity: 1; 
+  /* No transform change needed if we rely on left/top updates, 
+     but we can add a subtle slide effect if desired. 
+     For now, keep simple to avoid fighting JS. */
+}
+.viz-tooltip-header {
+  font-weight: 800;
+  margin-bottom: 4px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--border);
+  display: flex; 
+  justify-content: space-between;
+  align-items: center;
+}
+.viz-tooltip-header .amt {
+  color: var(--accent-green);
+  font-feature-settings: "tnum";
+}
+.viz-tooltip-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.viz-tooltip-row {
+  display: flex; 
+  justify-content: space-between;
+  font-size: 0.7rem; /* Smaller row text */
+  color: var(--text-secondary);
+}
+.viz-tooltip-row span:last-child {
+  font-weight: 700;
+  color: var(--text-main);
+  font-feature-settings: "tnum";
 }
