@@ -44,6 +44,71 @@ async function init() {
 
 // --- ACTIONS ---
 
+async function updateProfile() {
+  const newEmail = document.getElementById("profile-email").value;
+  const currentPass = document.getElementById("current-password").value;
+  const newPass = document.getElementById("profile-password").value;
+  
+  if (!newEmail) return alert("Email cannot be empty");
+
+  // If changing password, REQUIRE current password
+  if (newPass && !currentPass) {
+    return alert("Please enter your current password to set a new one.");
+  }
+
+  showToast("Updating profile...", "loading");
+  
+  const { data: { session } } = await client.auth.getSession();
+  if (!session) return;
+
+  // 1. Re-authenticate if changing password (security check)
+  if (newPass) {
+    const { error: authError } = await client.auth.signInWithPassword({ 
+      email: session.user.email, 
+      password: currentPass 
+    });
+    
+    if (authError) {
+      showToast("Incorrect current password", "error");
+      return;
+    }
+  }
+
+  // 2. Prepare Updates
+  const updates = {};
+  if (newEmail !== session.user.email) updates.email = newEmail;
+  if (newPass) updates.password = newPass;
+
+  if (Object.keys(updates).length === 0) {
+    showToast("No changes detected", "error");
+    return;
+  }
+
+  // 3. Execute Update
+  const { data, error } = await client.auth.updateUser(updates);
+
+  if (error) {
+    showToast(error.message, "error");
+  } else {
+    // If email was updated, Supabase sends a confirmation link.
+    if (updates.email) {
+      alert("Confirmation link sent to " + newEmail + ". Please click it to finalize the change.");
+      
+      // OPTIONAL: Sync to profiles table
+      const { error: profileError } = await client.from("profiles").update({ email: newEmail }).eq("id", session.user.id);
+      if (profileError) console.error("Profile sync error", profileError);
+    }
+    
+    if (updates.password) {
+      document.getElementById("current-password").value = "";
+      document.getElementById("profile-password").value = "";
+      showToast("Password updated successfully", "success");
+    } else if (!updates.email) {
+      showToast("Profile updated", "success");
+    }
+  }
+}
+
 async function saveKey() {
   const key = document.getElementById("api-key").value;
   const {
@@ -89,9 +154,10 @@ async function testConnection() {
 }
 
 async function confirmReset() {
-  if (!confirm("Are you sure? This will delete ALL your transactions. This cannot be undone.")) return;
+  // Friendlier "Fresh Start" confirmation
+  if (!confirm("Ready for a fresh start? \n\nThis will clear your transaction history so you can begin anew. Accounts and settings will be saved.")) return;
 
-  showToast("Deleting data...", "loading");
+  showToast("Starting fresh...", "loading");
   const {
     data: { session },
   } = await client.auth.getSession();
@@ -100,9 +166,11 @@ async function confirmReset() {
   const { error } = await client.from("statement_logs").delete().eq("user_id", session.user.id);
   const { error: txError } = await client.from("transactions").delete().eq("user_id", session.user.id);
 
-  if (error || txError) showToast("Delete failed", "error");
+  if (error || txError) showToast("Fresh start failed", "error");
   else {
-    showToast("All data wiped", "success");
+    showToast("Slate wiped clean!", "success");
+    // Clear AI cache so insights align with empty state
+    await client.from("profiles").update({ insights_cache: null, insights_updated_at: null }).eq("id", session.user.id);
   }
 }
 

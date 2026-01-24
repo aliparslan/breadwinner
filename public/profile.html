@@ -30,19 +30,37 @@
       <div class="section-header">
         <h3>Account</h3>
       </div>
-      <div class="card" style="margin-bottom: 30px">
+      <!-- ACCOUNT SETTINGS -->
+      <div class="settings-group">
         <label class="input-label" for="profile-email">Email</label>
-        <input type="text" id="profile-email" disabled style="background: #f5f5f4; color: var(--text-muted)" />
+        <input type="text" id="profile-email" placeholder="your@email.com" />
+
+        <div style="display: flex; gap: 12px; margin-top: 12px;">
+            <div style="flex: 1;">
+                 <label class="input-label" for="current-password">Current Password</label>
+                 <input type="password" id="current-password" placeholder="Required to save changes" />
+            </div>
+            <div style="flex: 1;">
+                 <label class="input-label" for="profile-password">New Password</label>
+                 <input type="password" id="profile-password" placeholder="Optional" />
+            </div>
+        </div>
+
+        <div style="margin-top: 15px; display: flex; justify-content: flex-end">
+          <button class="primary-btn" onclick="updateProfile()">Update Profile</button>
+        </div>
       </div>
 
+      <div class="settings-divider"></div>
+
+      <!-- AI CONFIG --->
       <div class="section-header">
         <h3>AI Configuration</h3>
       </div>
-
-      <div class="card" style="margin-bottom: 30px">
-        <p style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 15px">
-          By default, Breadwinner uses a shared system key. You can provide your own Google Gemini API Key for higher
-          limits.
+      
+      <div class="settings-group">
+        <p style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 15px; line-height: 1.5;">
+          Breadwinner uses a shared system key by default. Add your own Google Gemini API Key for higher limits.
         </p>
 
         <label class="input-label" for="api-key">Gemini API Key</label>
@@ -57,35 +75,33 @@
         <div id="key-status" style="margin-top: 10px; font-size: 0.85rem"></div>
       </div>
 
+      <div class="settings-divider"></div>
+
+      <!-- DANGER ZONE / FRESH START -->
       <div class="section-header">
-        <h3 style="color: var(--accent-red)">Danger Zone</h3>
+        <h3>Danger Zone</h3>
       </div>
 
-      <div class="card" style="border: 1px solid var(--accent-red)">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px">
+      <div class="settings-row">
           <div>
-            <h4 style="color: var(--accent-red); margin-bottom: 4px">Reset Transaction Data</h4>
-            <span style="font-size: 0.8rem; color: var(--text-muted)"
-              >Deletes all transactions and statement logs.</span
-            >
+            <h4 style="color: var(--primary); margin: 0 0 4px 0;">Fresh Start</h4>
+            <span style="font-size: 0.85rem; color: var(--text-secondary);">
+              Wipe the slate clean. Deletes all transactions so you can start over.
+            </span>
           </div>
-          <button
-            class="secondary"
-            style="color: var(--accent-red); border-color: var(--accent-red)"
-            onclick="confirmReset()">
-            Reset
-          </button>
-        </div>
+          <button class="secondary" onclick="confirmReset()">Start Fresh</button>
+      </div>
 
-        <div style="display: flex; justify-content: space-between; align-items: center">
+      <div class="settings-row" style="border-bottom: none;">
           <div>
-            <h4 style="color: var(--accent-red); margin-bottom: 4px">Delete Account</h4>
-            <span style="font-size: 0.8rem; color: var(--text-muted)">Permanently remove your account and data.</span>
+            <h4 style="color: var(--accent-red); margin: 0 0 4px 0;">Delete Account</h4>
+            <span style="font-size: 0.85rem; color: var(--text-muted);">
+              Permanently remove your account and data.
+            </span>
           </div>
-          <button class="primary-btn" style="background-color: var(--accent-red)" onclick="confirmDeleteAccount()">
+          <button class="primary-btn" style="background-color: var(--accent-red); border: none;" onclick="confirmDeleteAccount()">
             Delete
           </button>
-        </div>
       </div>
     </div>
 

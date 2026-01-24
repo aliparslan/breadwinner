@@ -319,6 +319,27 @@ button.secondary:hover {
 
 
 
+/* --- SETTINGS LAYOUT --- */
+.settings-group {
+  margin-bottom: 24px;
+}
+.settings-divider {
+  height: 1px;
+  border-top: 1px dashed var(--border);
+  margin: 30px 0;
+  width: 100%;
+}
+.settings-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 0;
+  border-bottom: 1px dashed var(--border);
+}
+.settings-row div {
+  max-width: 70%;
+}
+
 /* --- SECTIONS --- */
 .section-header {
   display: flex; justify-content: space-between; align-items: center;
