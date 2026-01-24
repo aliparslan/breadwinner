@@ -1,4 +1,4 @@
-# Breadwinner
+# 🍞 Breadwinner
 > Make cents of your spending!
 
 Breadwinner is a personal finance application designed to help users track their spending, manage monthly budgets, and visualize financial habits with ease. It offers a modern, interactive interface for categorizing transactions and gaining insights into spending patterns.
