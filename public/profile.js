@@ -1,27 +1,14 @@
-const SUPABASE_URL = "https://ahvfdteobwmrqkiorhpv.supabase.co";
-const SUPABASE_KEY =
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFodmZkdGVvYndtcnFraW9yaHB2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjgyNzI5NzMsImV4cCI6MjA4Mzg0ODk3M30.2K314udaXPAKiWalxXLNmZHqvv9YQ7iQnUtYyONTPrI";
-const client = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+// --- CONFIGURATION ---
+// Loaded from config.js
 
-const toastEl = document.getElementById("status-toast");
-const toastText = document.getElementById("status-text");
-let toastTimer;
 
-function showToast(msg, type = "loading") {
-  toastText.innerText = msg;
-  toastEl.className = "";
-  toastEl.classList.add(type, "show");
-  clearTimeout(toastTimer);
-  if (type !== "loading") {
-    toastTimer = setTimeout(() => toastEl.classList.remove("show"), 3000);
-  }
-}
+// --- HELPER: TOAST NOTIFICATIONS ---
+// Loaded from utils.js
 
-function toggleLoading(show) {
-  const overlay = document.getElementById("loading-overlay");
-  if (show) overlay.classList.remove("hidden");
-  else overlay.classList.add("hidden");
-}
+
+// --- HELPER: LOADING OVERLAY ---
+// Loaded from utils.js
+
 
 // --- INIT ---
 async function init() {

@@ -296,10 +296,7 @@ button.secondary:hover {
 }
 
 /* --- CARDS --- */
-.summary-cards {
-  display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;
-  margin-bottom: 30px;
-}
+
 .card {
   background: transparent; padding: 16px;
   border-radius: 12px;
@@ -318,10 +315,7 @@ button.secondary:hover {
 .positive { color: var(--accent-green) !important; }
 .negative { color: var(--text-main); }
 
-/* Summary cards spacing */
-.summary-cards {
-  margin-bottom: 24px;
-}
+
 
 /* --- SECTIONS --- */
 .section-header {
@@ -760,23 +754,7 @@ tr:hover .actions {
     background: transparent; border: none; padding: 0; width: auto;
   }
 
-  /* Fixed Mobile Summary Cards */
-  .summary-cards {
-    display: flex; flex-direction: row; gap: 8px; width: 100%;
-    margin-bottom: 32px; /* Separation */
-  }
-  .summary-cards .card {
-    flex: 1; padding: 10px 4px;
-    display: flex; flex-direction: column; 
-    justify-content: center; align-items: center;
-    border-radius: 12px; min-height: 70px;
-  }
-  .summary-cards .card h4 {
-    margin-bottom: 4px; letter-spacing: 0.05em;
-  }
-  .summary-cards .card p {
-    font-size: 0.95rem; margin-top: 0; line-height: 1.2;
-  }
+
 
   /* Mobile Viz Header Fix */
   .viz-header {
