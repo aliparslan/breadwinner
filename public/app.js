@@ -679,6 +679,14 @@ function closeModal() {
   document.getElementById("edit-modal").classList.add("hidden");
 }
 
+function openAboutModal() {
+  document.getElementById("about-modal").classList.remove("hidden");
+}
+
+function closeAboutModal() {
+  document.getElementById("about-modal").classList.add("hidden");
+}
+
 // Delete directly from modal without confirmation
 async function deleteFromModal() {
   if (!currentEditId) return;

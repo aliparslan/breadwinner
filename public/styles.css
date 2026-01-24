@@ -36,51 +36,51 @@ body {
   -webkit-font-smoothing: antialiased;
   line-height: 1.5;
   overflow-x: hidden; /* Prevent horizontal scroll */
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
 }
 
-/* LOADING OVERLAY */
-#loading-overlay {
-  position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-  background: var(--bg-body); z-index: 9999;
-  display: flex; justify-content: center; align-items: center;
-  transition: opacity 0.3s ease;
-}
-.spinner {
-  width: 40px; height: 40px;
-  border: 3px solid rgba(0,0,0,0.1);
-  border-top-color: var(--primary);
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
-}
-@keyframes spin { to { transform: rotate(360deg); } }
-
-#app-container {
-  width: 100%; max-width: 900px;
-  margin: 0 auto;
-  padding: 30px 20px;
-  box-sizing: border-box;
-}
+/* ... */
 
 /* --- AUTH --- */
+/* --- AUTH --- */
 .auth-container {
-  max-width: 400px; margin: 10vh auto 0; padding: 30px;
-  background: var(--bg-card); border-radius: 16px;
-  box-shadow: 0 10px 40px -10px rgba(0,0,0,0.08);
-  border: 1px solid var(--border); /* Added border for better contrast */
+  max-width: 440px; 
+  width: 90%; 
+  padding: 80px 50px; /* Even more spacious padding */
+  background: var(--bg-card); 
+  border-radius: 24px;
+  box-shadow: 0 30px 60px -15px rgba(0,0,0,0.1);
+  border: 2px solid #a8a29e; /* Thicker, darker border (Stone 400) */
   text-align: center;
+  
+  /* Absolute Centering */
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  margin: 0;
 }
+
+/* ... */
+
+/* --- AUTH --- */
+/* .auth-container definition moved to line 47 */
 .auth-container h1 {
   font-size: 2rem; margin-bottom: 0.5rem; color: var(--primary); font-weight: 800;
 }
 .auth-buttons {
-  margin-top: 1.5rem; display: flex; flex-direction: column; gap: 12px;
+  margin-top: 2rem; /* More space before buttons */
+  display: flex; flex-direction: column; gap: 16px; /* increased gap */
 }
 
 /* --- INPUTS --- */
 .input-label {
   font-size: 0.75rem; font-weight: 700; text-transform: uppercase;
   letter-spacing: 0.05em; color: var(--text-muted);
-  margin: 12px 0 4px 0; display: block; text-align: left;
+  margin: 20px 0 6px 0; /* Increased spacing between inputs */
+  display: block; text-align: left;
 }
 .subtitle {
   color: var(--text-secondary); margin-bottom: 24px; font-size: 1rem;
@@ -1525,7 +1525,8 @@ tr:hover .actions {
   color: var(--text-muted);
   font-size: 0.8rem;
   font-weight: 500;
-  border-top: 1px solid transparent; /* Keeps spacing consistent */
+  border-top: 1px solid transparent; 
+  margin-top: auto; /* Push to bottom */
 }
 
 /* Tooltip Styling */
