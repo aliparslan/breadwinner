@@ -219,7 +219,12 @@ function renderVizForMonth(monthIndex) {
     }
 
     const deltaPct = ((current - prev) / prev) * 100;
-    if (Math.abs(deltaPct) < 0.1) return '';
+    
+    // Handle small/no change
+    if (Math.abs(deltaPct) < 0.1) {
+       return `<span class="stat-card-ticker" style="color: var(--text-muted)">—</span>`;
+    }
+
     const isUp = deltaPct > 0;
     // For expenses: up is bad (red), down is good (green)
     // For income/net: up is good (green), down is bad (red)
@@ -227,7 +232,10 @@ function renderVizForMonth(monthIndex) {
     const downColor = invertColors ? 'var(--accent-green)' : 'var(--accent-red)';
     const color = isUp ? upColor : downColor;
     const arrow = isUp ? '▲' : '▼';
-    return `<span class="stat-card-ticker" style="color: ${color}">${arrow} ${Math.abs(deltaPct).toFixed(1)}%</span>`;
+    const absDelta = Math.abs(deltaPct);
+    const fractionDigits = absDelta >= 1000 ? 0 : 1;
+    const fmtPct = new Intl.NumberFormat('en-US', { minimumFractionDigits: fractionDigits, maximumFractionDigits: fractionDigits }).format(absDelta);
+    return `<span class="stat-card-ticker" style="color: ${color}">${arrow} ${fmtPct}%</span>`;
   }
 
   const expenseTickerHtml = getTickerHtml(periodExpense, prevExpense, true); // Invert: up is bad
@@ -259,12 +267,19 @@ function renderVizForMonth(monthIndex) {
       } else if (Math.abs(c.delta) < 0.1) {
         deltaStr = "—";
         deltaColor = "var(--text-muted)";
-      } else if (c.delta > 0) {
-        deltaStr = `▲ ${c.delta.toFixed(1)}%`;
-        deltaColor = "var(--accent-red)";
       } else {
-        deltaStr = `▼ ${Math.abs(c.delta).toFixed(1)}%`;
-        deltaColor = "var(--accent-green)";
+        const absDelta = Math.abs(c.delta);
+        const fractionDigits = absDelta >= 1000 ? 0 : 1;
+        
+        if (c.delta > 0) {
+          const fmtDelta = new Intl.NumberFormat('en-US', { minimumFractionDigits: fractionDigits, maximumFractionDigits: fractionDigits }).format(c.delta);
+          deltaStr = `▲ ${fmtDelta}%`;
+          deltaColor = "var(--accent-red)";
+        } else {
+          const fmtDelta = new Intl.NumberFormat('en-US', { minimumFractionDigits: fractionDigits, maximumFractionDigits: fractionDigits }).format(absDelta);
+          deltaStr = `▼ ${fmtDelta}%`;
+          deltaColor = "var(--accent-green)";
+        }
       }
 
       // Always use the category color for the pill (not gray)
@@ -279,7 +294,7 @@ function renderVizForMonth(monthIndex) {
               <span class="viz-cat-pct">${c.pctOfTotal.toFixed(1)}%</span>
             </div>
             <div class="viz-row-bot">
-              <span class="viz-cat-amt">${formatCurrency(c.amount)}</span>
+              <span class="viz-cat-amt">${formatCurrency(c.amount, true)}</span>
               <span class="viz-cat-change" style="color: ${deltaColor}">${deltaStr}</span>
             </div>
           </div>
@@ -292,30 +307,37 @@ function renderVizForMonth(monthIndex) {
     <div class="viz-card">
       <div class="viz-header">
         <div class="viz-month-container">
-          <select id="viz-month-dropdown" class="viz-month-select" onchange="onVizMonthChange(this.value)">
-            ${monthDropdownOptions}
-          </select>
-          <svg class="viz-month-arrow" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <span class="viz-month-text">${isAllTime ? "All Time" : new Date(parseInt(currentKey.split("-")[0]), parseInt(currentKey.split("-")[1]) - 1).toLocaleString("default", { month: "long", year: "numeric" })}</span>
+          <svg class="viz-month-arrow-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
             <polyline points="6 9 12 15 18 9"></polyline>
           </svg>
+          <select id="viz-month-dropdown" class="viz-month-overlay" onchange="onVizMonthChange(this.value)">
+            ${monthDropdownOptions}
+          </select>
         </div>
       </div>
 
       <div class="stat-cards-row">
         <div class="stat-card">
           <span class="stat-card-label">Expenses</span>
-          <span class="stat-card-value">${formatCurrency(periodExpense)}</span>
-          ${expenseTickerHtml}
+          <div class="stat-card-row">
+            <span class="stat-card-value">${formatCurrency(periodExpense, true)}</span>
+            ${expenseTickerHtml}
+          </div>
         </div>
         <div class="stat-card">
           <span class="stat-card-label">Income</span>
-          <span class="stat-card-value positive">${formatCurrency(periodIncome)}</span>
-          ${incomeTickerHtml}
+          <div class="stat-card-row">
+            <span class="stat-card-value positive">${formatCurrency(periodIncome, true)}</span>
+            ${incomeTickerHtml}
+          </div>
         </div>
         <div class="stat-card">
           <span class="stat-card-label">Net</span>
-          <span class="stat-card-value ${periodNet >= 0 ? 'positive' : 'negative'}">${periodNet >= 0 ? '+' : '-'}${formatCurrency(Math.abs(periodNet))}</span>
-          ${netTickerHtml}
+          <div class="stat-card-row">
+            <span class="stat-card-value ${periodNet >= 0 ? 'positive' : 'negative'}">${periodNet >= 0 ? '+' : ''}${formatCurrency(periodNet, true)}</span>
+            ${netTickerHtml}
+          </div>
         </div>
       </div>
 

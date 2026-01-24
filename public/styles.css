@@ -120,13 +120,13 @@ input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
 .input-group .prefix {
   position: absolute; 
   left: 12px; 
-  top: 50%; 
+  top: 52%; /* Optical centering fix */
   transform: translateY(-50%);
   color: var(--text-muted); 
   font-weight: 700; 
   pointer-events: none;
   font-size: 0.95rem;
-  line-height: 1;
+  line-height: normal;
 }
 .input-group input { padding-left: 28px; }
 
@@ -186,9 +186,11 @@ button.secondary:hover {
 /* --- HEADER --- */
 .dashboard-header {
   display: flex; justify-content: space-between; align-items: center;
-  margin-bottom: 24px;
-  padding-bottom: 16px;
-  border-bottom: 1px solid #e7d8c9; /* Subtle distinction */
+  /* Reduced spacing for better vertical centering */
+  margin-bottom: 20px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid #e7d8c9;
+  line-height: normal;
 }
 .dash-brand { display: flex; align-items: center; gap: 10px; transition: opacity 0.2s;}
 .dash-brand:hover { opacity: 0.8; }
@@ -291,7 +293,7 @@ button.secondary:hover {
 /* Mobile dropdown adjustments */
 @media screen and (max-width: 600px) {
   .user-email-text {
-    max-width: 100px;
+    max-width: 55vw; /* Allow up to ~55% of screen width */
   }
 }
 
@@ -1056,6 +1058,12 @@ tr:hover .actions {
   box-shadow: 0 2px 6px rgba(74, 59, 50, 0.04);
 }
 
+.stat-card-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
 .stat-card-label {
   font-size: 0.7rem;
   font-weight: 700;
@@ -1165,47 +1173,46 @@ tr:hover .actions {
 }
 
 /* Month dropdown container with inline arrow */
+/* Month dropdown container (TEXT + ICON + OVERLAY) */
 .viz-month-container {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
   position: relative;
+  display: inline-flex;
+  align-items: baseline;
+  cursor: pointer;
+  transition: opacity 0.2s;
 }
 
-.viz-month-select {
-  appearance: none;
-  -webkit-appearance: none;
-  -moz-appearance: none;
-  background: transparent !important;
-  border: none !important;
+.viz-month-container:hover {
+  opacity: 0.7;
+}
+
+.viz-month-text {
   font-size: 1.5rem;
   font-weight: 800;
   color: var(--primary);
   letter-spacing: -0.02em;
-  font-family: inherit;
-  cursor: pointer;
-  padding: 0;
-  margin: 0;
-  text-align: left;
-  transition: opacity 0.2s ease;
-  width: auto; /* Allow it to shrink to content so arrow can be inline */
-  min-width: 60px; /* Ensure it doesn't collapse to 0 */
-  opacity: 1 !important;
+  line-height: 1;
 }
 
-.viz-month-arrow {
+.viz-month-arrow-icon {
+  margin-left: 6px;
   color: var(--primary);
-  opacity: 0.7;
-  margin-left: -2px;
-  pointer-events: none;
+  flex-shrink: 0;
+  position: relative;
+  top: 5px; /* Offset for optical baseline alignment */
+  margin-bottom: 0;
 }
 
-.viz-month-select:hover {
-  opacity: 0.7;
-}
-
-.viz-month-select:focus {
-  outline: none;
+.viz-month-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
 }
 
 .viz-month-select option {
@@ -1393,12 +1400,8 @@ tr:hover .actions {
     display: none;
   }
   
-  .viz-month-select {
+  .viz-month-text {
     font-size: 1.25rem;
-    padding-right: 24px;
-    background-size: 14px;
-    text-align: left;
-    width: 100%;
   }
 
   /* Mobile stat cards - stack or fit in row */
@@ -1413,6 +1416,16 @@ tr:hover .actions {
   
   .stat-card-value {
     font-size: 1rem;
+  }
+  
+  /* Stack Value and Ticker on Mobile */
+  .stat-card-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+  }
+  .stat-card-ticker {
+    font-size: 0.65rem; /* Smaller ticker on mobile */
   }
 }
 

@@ -30,11 +30,24 @@ function toggleLoading(show) {
 }
 
 // --- FORMATTING ---
-function formatCurrency(amount) {
+function formatCurrency(amount, compact = false) {
   const num = parseFloat(amount);
+  
+  if (compact && Math.abs(num) >= 100000) {
+     return new Intl.NumberFormat('en-US', {
+       style: 'currency',
+       currency: 'USD',
+       notation: 'compact',
+       compactDisplay: 'short',
+       maximumFractionDigits: 2
+     }).format(num);
+  }
+
   const isNeg = num < 0;
   const absVal = Math.abs(num).toFixed(2);
-  return (isNeg ? "-$" : "$") + absVal;
+  // Add commas for thousands in standard view too
+  const withCommas = absVal.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  return (isNeg ? "-$" : "$") + withCommas;
 }
 
 function formatDate(dateString) {
