@@ -180,6 +180,7 @@ button.secondary:hover {
   background: white; 
   box-shadow: 0 2px 6px rgba(74, 59, 50, 0.1);
   font-weight: 700;
+  border: 1px solid #d7ccc8; /* Added border for better definition */
 }
 #type-income.active { color: var(--accent-green); }
 #type-expense.active { color: var(--primary); }
