@@ -110,18 +110,6 @@ input[type="number"]::-webkit-outer-spin-button {
 }
 input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
 
-/* Safari/Mobile Date Fix */
-input[type="date"] {
-  -webkit-appearance: none;
-  appearance: none;
-  display: block;
-  width: 100%; 
-  max-width: 100%;
-  min-width: 0;
-  box-sizing: border-box;
-  margin: 0 0 8px 0; /* Inherit standard input margin */
-}
-
 /* Input Group - for prefixed inputs like $ */
 .input-group { 
   position: relative; 
@@ -132,15 +120,13 @@ input[type="date"] {
 .input-group .prefix {
   position: absolute; 
   left: 12px; 
-  top: 50%;
-  transform: translateY(-50%); /* Exact center */
+  top: 52%; /* Optical centering fix */
+  transform: translateY(-50%);
   color: var(--text-muted); 
   font-weight: 700; 
   pointer-events: none;
   font-size: 0.95rem;
-  line-height: 1; 
-  display: flex;
-  align-items: center;
+  line-height: normal;
 }
 .input-group input { padding-left: 28px; }
 
@@ -424,29 +410,6 @@ button.secondary:hover {
 /* --- CATEGORY LIST --- */
 
 /* --- TABLE (DESKTOP) --- */
-.mobile-chevron-cell { display: none; }
-
-.inline-cat-select {
-  appearance: none;
-  -webkit-appearance: none;
-  background: white;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 4px 8px;
-  font-size: 0.8rem;
-  font-weight: 700;
-  color: var(--text-main);
-  cursor: pointer;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-  font-family: inherit;
-  width: 100%;
-}
-.inline-cat-select:focus {
-  outline: none;
-  border-color: var(--primary);
-  box-shadow: 0 0 0 2px rgba(74, 59, 50, 0.1);
-}
-
 .month-group {
   margin-bottom: 24px;
   border: 1px solid var(--border);
@@ -961,7 +924,7 @@ tr:hover .actions {
 
   /* Amount - Fixed to right */
   td:nth-child(4) {
-    font-size: 0.95rem; /* Changed from 0.9rem to 0.95rem */
+    font-size: 0.9rem;
     font-weight: 750;
     white-space: nowrap;
     text-align: right;
@@ -970,15 +933,7 @@ tr:hover .actions {
     padding: 0 4px 0 0; /* Small right padding */
     margin-left: auto; /* Push to far right if flex spacing behaves oddly */
     min-width: unset; /* Remove min-width to avoid overflow */
-  }
 
-  /* Mobile Chevron */
-  .mobile-chevron-cell {
-    display: flex !important;
-    align-items: center;
-    justify-content: flex-end;
-    padding: 0 0 0 8px; 
-    width: auto;
   }
 
   /* Actions - hidden */
