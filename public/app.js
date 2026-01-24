@@ -4,6 +4,51 @@ const SUPABASE_KEY =
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFodmZkdGVvYndtcnFraW9yaHB2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjgyNzI5NzMsImV4cCI6MjA4Mzg0ODk3M30.2K314udaXPAKiWalxXLNmZHqvv9YQ7iQnUtYyONTPrI";
 const client = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+// --- CATEGORY COLORS (for viz bars - saturated) ---
+const CATEGORY_COLORS = {
+  "Housing": "#5c4033",       // Dark Brown
+  "Groceries": "#228b22",     // Forest Green
+  "Transportation": "#4169e1", // Royal Blue
+  "Subscriptions": "#9932cc", // Purple
+  "Health": "#dc143c",        // Crimson
+  "Shopping": "#daa520",      // Goldenrod
+  "Entertainment": "#ff8c00", // Dark Orange
+  "Savings": "#20b2aa",       // Light Sea Green
+  "Other": "#708090",         // Slate Gray
+  "Dining": "#db7093",        // Pale Violet Red
+  "Travel": "#00ced1",        // Dark Turquoise
+  "Gifts": "#ba55d3",         // Medium Orchid
+  "Income": "#2e8b57",        // Sea Green
+  "Uncategorized": "#a9a9a9", // Dark Gray
+};
+
+// --- CATEGORY PILL COLORS (lighter backgrounds for pills) ---
+const CATEGORY_PILL_COLORS = {
+  "Housing": { bg: "#d4c4bc", text: "#5c4033" },
+  "Groceries": { bg: "#c8e6c9", text: "#1b5e20" },
+  "Transportation": { bg: "#bbdefb", text: "#1565c0" },
+  "Subscriptions": { bg: "#e1bee7", text: "#7b1fa2" },
+  "Health": { bg: "#ffcdd2", text: "#b71c1c" },
+  "Shopping": { bg: "#fff3cd", text: "#856404" },
+  "Entertainment": { bg: "#ffe0b2", text: "#e65100" },
+  "Savings": { bg: "#b2dfdb", text: "#00695c" },
+  "Other": { bg: "#cfd8dc", text: "#455a64" },
+  "Dining": { bg: "#f8bbd9", text: "#880e4f" },
+  "Travel": { bg: "#b2ebf2", text: "#00838f" },
+  "Gifts": { bg: "#e1bee7", text: "#6a1b9a" },
+  "Income": { bg: "#c8e6c9", text: "#2e7d32" },
+  "Uncategorized": { bg: "#e0e0e0", text: "#616161" },
+};
+
+function getCategoryColor(categoryName) {
+  return CATEGORY_COLORS[categoryName] || CATEGORY_COLORS["Other"];
+}
+
+function getCategoryPillStyle(categoryName) {
+  const pill = CATEGORY_PILL_COLORS[categoryName] || CATEGORY_PILL_COLORS["Other"];
+  return `background-color: ${pill.bg}; color: ${pill.text};`;
+}
+
 // --- HELPER: TOAST NOTIFICATIONS ---
 const toastEl = document.getElementById("status-toast");
 const toastText = document.getElementById("status-text");
@@ -108,10 +153,13 @@ document.getElementById("filter-category").addEventListener("change", applyFilte
 let vizMonthsData = {}; // Global store for month data
 let vizSortedMonthKeys = []; // Sorted month keys
 let vizCurrentMonthIndex = 0; // Track currently selected month
+let vizAllTransactions = []; // Store all transactions for income/expense calculations
 
 function renderMonthlyViz(transactions) {
   const container = document.getElementById("monthly-viz");
   if (!container) return;
+
+  vizAllTransactions = transactions; // Store for income/expense calculations
 
   // 1. Filter Expenses Only & Sort by Date Descending
   const expenses = transactions
@@ -123,16 +171,19 @@ function renderMonthlyViz(transactions) {
     return;
   }
 
-  // 2. Group by Month (YYYY-MM)
-  vizMonthsData = {};
+  // 2. Group by Month (YYYY-MM) + All Time
+  vizMonthsData = { "all": [] };
   expenses.forEach((t) => {
     const key = t.date.substring(0, 7); // "2023-10"
     if (!vizMonthsData[key]) vizMonthsData[key] = [];
     vizMonthsData[key].push(t);
+    vizMonthsData["all"].push(t); // Also add to all time
   });
 
-  vizSortedMonthKeys = Object.keys(vizMonthsData).sort().reverse(); // ["2023-10", "2023-09"]
-  vizCurrentMonthIndex = 0; // Reset to most recent month
+  // Sort keys with "all" first, then months descending
+  const monthKeys = Object.keys(vizMonthsData).filter(k => k !== "all").sort().reverse();
+  vizSortedMonthKeys = ["all", ...monthKeys];
+  vizCurrentMonthIndex = 0; // Start with All Time
   
   renderVizForMonth(vizCurrentMonthIndex);
   container.classList.remove("hidden");
@@ -143,21 +194,39 @@ function renderVizForMonth(monthIndex) {
   if (!container) return;
 
   const currentKey = vizSortedMonthKeys[monthIndex];
-  const prevKey = vizSortedMonthKeys[monthIndex + 1]; // Compare with the month before the selected one
+  const isAllTime = currentKey === "all";
+  
+  // For comparison: if All Time, no comparison. Otherwise compare to previous month
+  const prevKey = isAllTime ? null : vizSortedMonthKeys[monthIndex + 1];
 
-  // 3. Current Month Stats
+  // 3. Current Period Stats (expenses)
   const currentTxs = vizMonthsData[currentKey];
   const currentTotal = currentTxs.reduce((sum, t) => sum + Math.abs(parseFloat(t.amount)), 0);
+
+  // Calculate Income/Expense/Net for selected period
+  let periodIncome = 0, periodExpense = 0;
+  const periodTransactions = isAllTime 
+    ? vizAllTransactions 
+    : vizAllTransactions.filter(t => t.date.startsWith(currentKey));
+  
+  periodTransactions.forEach(tx => {
+    const amt = parseFloat(tx.amount);
+    if (amt > 0) periodIncome += amt;
+    else periodExpense += Math.abs(amt);
+  });
+  const periodNet = periodIncome - periodExpense;
 
   // 4. Previous Month Stats (for delta)
   let prevTotal = 0;
   let prevCatTotals = {};
-  if (prevKey) {
+  if (prevKey && prevKey !== "all") {
     const prevTxs = vizMonthsData[prevKey];
-    prevTotal = prevTxs.reduce((sum, t) => sum + Math.abs(parseFloat(t.amount)), 0);
-    prevTxs.forEach((t) => {
-      prevCatTotals[t.categoryName] = (prevCatTotals[t.categoryName] || 0) + Math.abs(parseFloat(t.amount));
-    });
+    if (prevTxs) {
+      prevTotal = prevTxs.reduce((sum, t) => sum + Math.abs(parseFloat(t.amount)), 0);
+      prevTxs.forEach((t) => {
+        prevCatTotals[t.categoryName] = (prevCatTotals[t.categoryName] || 0) + Math.abs(parseFloat(t.amount));
+      });
+    }
   }
 
   // 5. Total Delta
@@ -166,7 +235,7 @@ function renderVizForMonth(monthIndex) {
     totalDeltaPct = ((currentTotal - prevTotal) / prevTotal) * 100;
   }
 
-  // 6. Category Breakdown for Current Month
+  // 6. Category Breakdown for Current Period
   const currentCatTotals = {};
   currentTxs.forEach((t) => {
     currentCatTotals[t.categoryName] = (currentCatTotals[t.categoryName] || 0) + Math.abs(parseFloat(t.amount));
@@ -191,42 +260,63 @@ function renderVizForMonth(monthIndex) {
   // Sort by Amount Descending
   catStats.sort((a, b) => b.amount - a.amount);
 
-  // Colors for visualization (Cocoa/Pastel Theme)
-  const colors = [
-    "#4a3b32", // Deep Espresso
-    "#9e644b", // Terra Cotta
-    "#7c866b", // Sage Green
-    "#a99282", // Clay
-    "#6e5b53", // Taupe
-    "#c3b091", // Sand
-    "#57534e", // Stone
-    "#8c6e63", // Cocoa
-  ];
-
   // 7. Generate HTML
   // Build month dropdown options
   const monthDropdownOptions = vizSortedMonthKeys.map((key, idx) => {
-    const [y, m] = key.split("-");
-    const monthName = new Date(parseInt(y), parseInt(m) - 1).toLocaleString("default", { month: "long", year: "numeric" });
-    return `<option value="${idx}" ${idx === monthIndex ? 'selected' : ''}>${monthName}</option>`;
+    let displayName;
+    if (key === "all") {
+      displayName = "All Time";
+    } else {
+      const [y, m] = key.split("-");
+      displayName = new Date(parseInt(y), parseInt(m) - 1).toLocaleString("default", { month: "long", year: "numeric" });
+    }
+    return `<option value="${idx}" ${idx === monthIndex ? 'selected' : ''}>${displayName}</option>`;
   }).join("");
 
-  let totalDeltaHtml;
-  if (!prevKey) {
-    totalDeltaHtml = `<span class="viz-trend neutral">New</span>`;
-  } else if (Math.abs(totalDeltaPct) < 0.1) {
-    totalDeltaHtml = `<span class="viz-trend neutral">—</span>`;
-  } else if (totalDeltaPct > 0) {
-    totalDeltaHtml = `<span class="viz-trend up">▲ ${totalDeltaPct.toFixed(1)}%</span>`;
-  } else {
-    totalDeltaHtml = `<span class="viz-trend down">▼ ${Math.abs(totalDeltaPct).toFixed(1)}%</span>`;
+  // Calculate deltas for all 3 stats (only for specific months, not All Time)
+  let prevIncome = 0, prevExpense = 0, prevNet = 0;
+  if (prevKey && prevKey !== "all") {
+    const prevPeriodTxs = vizAllTransactions.filter(t => t.date.startsWith(prevKey));
+    prevPeriodTxs.forEach(tx => {
+      const amt = parseFloat(tx.amount);
+      if (amt > 0) prevIncome += amt;
+      else prevExpense += Math.abs(amt);
+    });
+    prevNet = prevIncome - prevExpense;
   }
+
+  // Helper to generate ticker HTML
+  // Helper to generate ticker HTML
+  function getTickerHtml(current, prev, invertColors = false) {
+    if (isAllTime) return ''; 
+    
+    // Handle new case
+    if (prev === 0) {
+      if (current > 0) return `<span class="stat-card-ticker" style="color: var(--text-muted)">New</span>`;
+      return '';
+    }
+
+    const deltaPct = ((current - prev) / prev) * 100;
+    if (Math.abs(deltaPct) < 0.1) return '';
+    const isUp = deltaPct > 0;
+    // For expenses: up is bad (red), down is good (green)
+    // For income/net: up is good (green), down is bad (red)
+    const upColor = invertColors ? 'var(--accent-red)' : 'var(--accent-green)';
+    const downColor = invertColors ? 'var(--accent-green)' : 'var(--accent-red)';
+    const color = isUp ? upColor : downColor;
+    const arrow = isUp ? '▲' : '▼';
+    return `<span class="stat-card-ticker" style="color: ${color}">${arrow} ${Math.abs(deltaPct).toFixed(1)}%</span>`;
+  }
+
+  const expenseTickerHtml = getTickerHtml(periodExpense, prevExpense, true); // Invert: up is bad
+  const incomeTickerHtml = getTickerHtml(periodIncome, prevIncome, false);
+  const netTickerHtml = getTickerHtml(periodNet, prevNet, false);
 
   // Bars HTML: Show Top 6 for visual clarity
   const barsHtml = catStats
     .slice(0, 6)
-    .map((c, i) => {
-      const color = colors[i % colors.length];
+    .map((c) => {
+      const color = getCategoryColor(c.name);
       return `<div class="viz-segment" style="width: ${c.pctOfTotal}%; background: ${color}" title="${c.name}"></div>`;
     })
     .join("");
@@ -234,11 +324,14 @@ function renderVizForMonth(monthIndex) {
   // Legend/Grid HTML: Show ALL categories
   const legendHtml = catStats
     .map((c, i) => {
-      const color = colors[i % colors.length];
+      const color = getCategoryColor(c.name);
       
       // Determine delta display
       let deltaStr, deltaColor;
-      if (c.prevAmount === 0) {
+      if (isAllTime) {
+         deltaStr = ""; // No badges for All Time
+         deltaColor = "transparent";
+      } else if (c.prevAmount === 0) {
         deltaStr = "New";
         deltaColor = "var(--text-muted)";
       } else if (Math.abs(c.delta) < 0.1) {
@@ -252,9 +345,8 @@ function renderVizForMonth(monthIndex) {
         deltaColor = "var(--accent-green)";
       }
 
-      // Simple indicator if it's in the bar chart
-      const isHiddenInBar = i >= 6;
-      const pillStyle = isHiddenInBar ? `background: #e7e5e4` : `background: ${color}`;
+      // Always use the category color for the pill (not gray)
+      const pillStyle = `background: ${color}`;
 
       return `
         <div class="viz-item">
@@ -277,18 +369,36 @@ function renderVizForMonth(monthIndex) {
   const html = `
     <div class="viz-card">
       <div class="viz-header">
-        <div class="viz-total-left">
-          <span class="viz-label">Total Spent</span>
-          <div class="viz-amount-row">
-            <span class="viz-big-number">${formatCurrency(currentTotal)}</span>
-            ${totalDeltaHtml}
-          </div>
-        </div>
-        <div class="viz-month-right">
+        <div class="viz-month-container">
           <select id="viz-month-dropdown" class="viz-month-select" onchange="onVizMonthChange(this.value)">
             ${monthDropdownOptions}
           </select>
+          <svg class="viz-month-arrow" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="6 9 12 15 18 9"></polyline>
+          </svg>
         </div>
+      </div>
+
+      <div class="stat-cards-row">
+        <div class="stat-card">
+          <span class="stat-card-label">Expenses</span>
+          <span class="stat-card-value">${formatCurrency(periodExpense)}</span>
+          ${expenseTickerHtml}
+        </div>
+        <div class="stat-card">
+          <span class="stat-card-label">Income</span>
+          <span class="stat-card-value positive">${formatCurrency(periodIncome)}</span>
+          ${incomeTickerHtml}
+        </div>
+        <div class="stat-card">
+          <span class="stat-card-label">Net</span>
+          <span class="stat-card-value ${periodNet >= 0 ? 'positive' : 'negative'}">${periodNet >= 0 ? '+' : '-'}${formatCurrency(Math.abs(periodNet))}</span>
+          ${netTickerHtml}
+        </div>
+      </div>
+
+      <div class="viz-breakdown-header">
+        <span class="viz-breakdown-title">Spending Breakdown</span>
       </div>
 
       <div class="viz-bar-container">
@@ -311,30 +421,8 @@ function onVizMonthChange(monthIndexStr) {
 }
 
 function renderDashboard(transactions) {
-  // Always render the monthly viz using global data (most recent month)
-  // regardless of the current search results
+  // Render the monthly viz (includes summary stats now)
   renderMonthlyViz(allTransactions);
-
-  let income = 0;
-  let expense = 0;
-  const catTotals = {};
-
-  transactions.forEach((tx) => {
-    const amt = parseFloat(tx.amount);
-    if (amt > 0) income += amt;
-    else {
-      expense += amt;
-      const c = tx.categoryName;
-      catTotals[c] = (catTotals[c] || 0) + Math.abs(amt);
-    }
-  });
-
-  document.getElementById("sum-income").innerText = formatCurrency(income);
-  document.getElementById("sum-expense").innerText = formatCurrency(Math.abs(expense));
-  const net = income + expense;
-  const sumNet = document.getElementById("sum-net");
-  sumNet.innerText = formatCurrency(Math.abs(net)); // Display Positive
-  sumNet.className = net >= 0 ? "positive" : "negative";
 
   // Table
   const container = document.getElementById("tx-table-container");
@@ -357,23 +445,29 @@ function renderDashboard(transactions) {
     return;
   }
 
-  // A11y Fix: Changed div.month-header to button
+  // Render months with collapsible headers (default collapsed, persisted per-month)
   container.innerHTML = Object.entries(grouped)
     .map(([month, txs]) => {
       const total = txs.reduce((s, t) => s + parseFloat(t.amount), 0);
       const rows = txs.map(renderRow).join("");
+      
+      // Check localStorage for saved state, default to collapsed
+      const monthKey = month.replace(/\s+/g, '-');
+      const savedState = localStorage.getItem(`month-${monthKey}`);
+      const isExpanded = savedState === 'true'; // Default false (collapsed)
+      const hiddenClass = isExpanded ? '' : 'hidden';
 
       return `
       <div class="month-group">
-        <button class="month-header" onclick="toggleMonth(this)" aria-expanded="true">
+        <button class="month-header" onclick="toggleMonth(this, '${monthKey}')" aria-expanded="${isExpanded}">
           <span>${month}</span>
           <span style="color: ${total >= 0 ? "var(--accent-green)" : "var(--text-main)"}">
             ${formatCurrency(Math.abs(total))}
           </span>
         </button>
-        <div class="month-content">
+        <div class="month-content ${hiddenClass}">
           <table>
-             <thead><tr><th>Date</th><th>Description</th><th>Category</th><th>Amount</th><th>Action</th></tr></thead>
+             <thead><tr><th>Date</th><th>Description</th><th>Category</th><th>Amount</th></tr></thead>
              <tbody>${rows}</tbody>
           </table>
         </div>
@@ -384,22 +478,26 @@ function renderDashboard(transactions) {
 
 function renderRow(tx) {
   const isNeg = tx.amount < 0;
-  const desc = tx.description.length > 40 ? tx.description.substring(0, 38) + "..." : tx.description;
-  // Tappable row - opens edit modal
+  const desc = tx.description.length > 60 ? tx.description.substring(0, 58) + "..." : tx.description;
+  const pillStyle = getCategoryPillStyle(tx.categoryName);
+  const categoryColor = getCategoryColor(tx.categoryName);
+  // Tappable row - opens edit modal, with category color for mobile dot
   return `
-    <tr onclick="openEdit(${tx.id})" style="cursor: pointer;" tabindex="0" role="button" aria-label="Edit ${desc}">
+    <tr onclick="openEdit(${tx.id})" style="cursor: pointer; --category-color: ${categoryColor};" tabindex="0" role="button" aria-label="Edit ${desc}">
       <td>${formatDate(tx.date)}</td>
       <td>${desc}</td>
-      <td><span>${tx.categoryName}</span></td>
+      <td><span class="category-badge" style="${pillStyle}">${tx.categoryName}</span></td>
       <td style="color:${isNeg ? "var(--text-main)" : "var(--accent-green)"}">${formatCurrency(Math.abs(tx.amount))}</td>
-      <td></td>
     </tr>`;
 }
 
-function toggleMonth(btn) {
+function toggleMonth(btn, monthKey) {
   const content = btn.nextElementSibling;
   const isHidden = content.classList.toggle("hidden");
-  btn.setAttribute("aria-expanded", !isHidden);
+  const isExpanded = !isHidden;
+  btn.setAttribute("aria-expanded", isExpanded);
+  // Save state to localStorage
+  localStorage.setItem(`month-${monthKey}`, isExpanded.toString());
 }
 
 // --- CONFIRMATION MODAL LOGIC ---
@@ -656,13 +754,61 @@ document.getElementById("logout-btn").onclick = async () => {
   toggleAppLoading(false);
 };
 
+// --- AI INSIGHTS ---
+async function fetchInsights(forceRefresh = false) {
+  const container = document.getElementById("ai-insights");
+  const textEl = document.getElementById("insights-text");
+  const refreshBtn = document.getElementById("refresh-insights-btn");
+  
+  if (!container || !textEl) return;
+  
+  container.classList.remove("hidden");
+  textEl.innerText = "Loading insights...";
+  textEl.classList.add("loading");
+  if (refreshBtn) refreshBtn.disabled = true;
+  
+  try {
+    const { data: { session } } = await client.auth.getSession();
+    if (!session) return;
+    
+    const url = forceRefresh ? "/api/insights?refresh=true" : "/api/insights";
+    const res = await fetch(url, {
+      headers: { Authorization: `Bearer ${session.access_token}` },
+    });
+    
+    const data = await res.json();
+    textEl.innerText = data.insight;
+    textEl.classList.remove("loading");
+    
+    if (data.error) {
+      textEl.classList.add("error");
+    } else {
+      textEl.classList.remove("error");
+    }
+  } catch (e) {
+    textEl.innerText = "Unable to load insights right now.";
+    textEl.classList.remove("loading");
+    textEl.classList.add("error");
+  }
+  
+  if (refreshBtn) refreshBtn.disabled = false;
+}
+
+// Bind refresh button
+document.getElementById("refresh-insights-btn")?.addEventListener("click", () => {
+  fetchInsights(true);
+});
+
 async function checkUser() {
   toggleAppLoading(true);
   const {
     data: { session },
   } = await client.auth.getSession();
   updateUI(session);
-  if (session) await fetchTransactions();
+  if (session) {
+    await fetchTransactions();
+    fetchInsights(); // Non-blocking, load in background
+  }
   toggleAppLoading(false);
 }
 
@@ -680,10 +826,27 @@ function updateUI(s) {
 // Init
 checkUser();
 
-// Close modal on Escape key
+// --- USER DROPDOWN ---
+function toggleUserDropdown() {
+  const menu = document.getElementById("user-dropdown-menu");
+  menu.classList.toggle("hidden");
+}
+
+// Close dropdown when clicking outside
+document.addEventListener("click", (e) => {
+  const dropdown = document.querySelector(".user-dropdown");
+  const menu = document.getElementById("user-dropdown-menu");
+  if (dropdown && menu && !dropdown.contains(e.target)) {
+    menu.classList.add("hidden");
+  }
+});
+
+// Close modal and dropdown on Escape key
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
     closeModal();
-    if (typeof closeConfirm === 'function') closeConfirm(false); // Check if exists
+    if (typeof closeConfirm === 'function') closeConfirm(false);
+    const menu = document.getElementById("user-dropdown-menu");
+    if (menu) menu.classList.add("hidden");
   }
 });

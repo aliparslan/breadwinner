@@ -50,26 +50,34 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
 
     let result;
 
-    if (rawText) {
-      // FAST MODE
-      const prompt = `
-          Extract date, description, and amount for every transaction from this bank statement text.
-          RULES:
-          1. Spending is NEGATIVE. Deposits are POSITIVE.
-          2. Categorize into: [${categoryNames}]. Use "Miscellaneous" if unsure.
-          3. Return ONLY raw JSON array: [{ "date": "YYYY-MM-DD", "description": "txt", "amount": -10.00, "category": "ExactName" }]
-          
-          TEXT:
-          ${rawText}
-        `;
-      result = await model.generateContent(prompt);
-    } else if (file) {
-      // SLOW MODE (Vision)
-      const arrayBuffer = await file.arrayBuffer();
-      const base64Data = btoa(new Uint8Array(arrayBuffer).reduce((data, byte) => data + String.fromCharCode(byte), ""));
-      const prompt = `Extract transactions. Spending=Negative. Categories: [${categoryNames}]. Return JSON array.`;
+    try {
+      if (rawText) {
+        // FAST MODE
+        const prompt = `
+            Extract date, description, and amount for every transaction from this bank statement text.
+            RULES:
+            1. Spending is NEGATIVE. Deposits are POSITIVE.
+            2. Categorize into: [${categoryNames}]. Use "Other" if unsure.
+            3. Return ONLY raw JSON array: [{ "date": "YYYY-MM-DD", "description": "txt", "amount": -10.00, "category": "ExactName" }]
+            
+            TEXT:
+            ${rawText}
+          `;
+        result = await model.generateContent(prompt);
+      } else if (file) {
+        // SLOW MODE (Vision)
+        const arrayBuffer = await file.arrayBuffer();
+        const base64Data = btoa(new Uint8Array(arrayBuffer).reduce((data, byte) => data + String.fromCharCode(byte), ""));
+        const prompt = `Extract transactions. Spending=Negative. Categories: [${categoryNames}]. Return JSON array.`;
 
-      result = await model.generateContent([prompt, { inlineData: { data: base64Data, mimeType: file.type } }]);
+        result = await model.generateContent([prompt, { inlineData: { data: base64Data, mimeType: file.type } }]);
+      }
+    } catch (aiError: any) {
+      // Handle rate limiting
+      if (aiError.status === 429 || aiError.message?.includes("429") || aiError.message?.includes("rate")) {
+        return new Response("AI rate limit reached. Please try again in a few minutes.", { status: 429 });
+      }
+      throw aiError;
     }
 
     const rawOutput = result.response.text();
