@@ -35,7 +35,28 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
       .eq("id", user.id)
       .single();
 
-    // 3. Check if we have a recent cached insight (less than 24 hours old)
+    // 3. Early exit if no transactions (fixes issue where cache persists after delete)
+    const { count, error: countError } = await supabase
+      .from("transactions")
+      .select("*", { count: "exact", head: true });
+
+    if (count === 0) {
+      // Clear cache if it exists so we don't hit this check repeatedly if we were to rely on cache later
+      // Although we are returning early, so cache doesn't matter for this response. 
+      // But good practice to ensure state is clean.
+      if (profile?.insights_cache) {
+         await supabase.from("profiles").update({ insights_cache: null, insights_updated_at: null }).eq("id", user.id);
+      }
+      
+      return new Response(JSON.stringify({ 
+        insight: "Add some transactions to get personalized spending insights!",
+        cached: false 
+      }), {
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    // 4. Check if we have a recent cached insight (less than 24 hours old)
     if (profile?.insights_cache && profile?.insights_updated_at) {
       const updatedAt = new Date(profile.insights_updated_at);
       const now = new Date();
@@ -51,7 +72,7 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
       }
     }
 
-    // 4. Fetch transactions to generate new insight
+    // 5. Fetch transactions to generate new insight
     const { data: transactions, error: txError } = await supabase
       .from("transactions")
       .select(`amount, date, categories ( name )`)
@@ -59,6 +80,7 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
       .limit(200); // Last 200 transactions for context
 
     if (txError || !transactions || transactions.length === 0) {
+      // Should be caught by count check, but safe fallback
       return new Response(JSON.stringify({ 
         insight: "Add some transactions to get personalized spending insights!",
         cached: false 
