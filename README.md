@@ -1,4 +1,2 @@
 # breadwinner
-Get yo money up!
-
-No yo funny up!
+Make cents of your spending!
