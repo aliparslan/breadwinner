@@ -883,6 +883,22 @@ tr:hover .actions {
     overflow: hidden; /* Prevent overflow */
   }
 
+  /* Chevron to indicate clickable */
+  tr::after {
+    content: '';
+    display: inline-block;
+    width: 6px;
+    height: 10px;
+    margin-left: 8px; /* Space from amount */
+    margin-right: 4px; /* Right padding */
+    flex-shrink: 0;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 6 10' fill='none' stroke='%23a8a29e' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='1 1 5 5 1 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: contain;
+    opacity: 0.8;
+  }
+
   /* Date - Hide on mobile */
   td:nth-child(1) {
     display: none;
