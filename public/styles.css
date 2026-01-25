@@ -418,7 +418,7 @@ button.secondary:hover {
   background: white;
   border: 1px solid var(--border);
   border-radius: 10px;
-  font-size: 0.9rem;
+  font-size: 0.85rem !important; /* Force smaller text on mobile */
   line-height: 44px; /* Ensure vertical centering */
   transition: all 0.2s ease;
 }
@@ -440,7 +440,7 @@ button.secondary:hover {
   background: white; /* Match input background */
   border: 1px solid var(--border);
   border-radius: 10px;
-  font-size: 0.9rem;
+  font-size: 0.85rem !important;
   appearance: none;
   -webkit-appearance: none;
   padding-right: 32px;
@@ -894,10 +894,19 @@ tr:hover .actions {
   }
   .filter-bar input {
     flex: 2;
-    /* height/font-size removed to fix cutoff */
+    height: 38px;
+    line-height: normal; /* Allow padding to center or use explicit line-height if needed. 38px is small. */
+    /* Previous cutoff was due to 16px font + small height. Now font is 0.85rem (~13.6px), so it should fit better. */
+    /* Let's try explicit line-height to force centering similar to desktop */
+    line-height: 38px; 
+    padding: 0 12px; /* Reduce side padding for mobile */
   }
   .filter-bar select {
     flex: 1;
+    height: 38px;
+    line-height: 38px;
+    padding-top: 0;
+    padding-bottom: 0;
   }
 
   thead {
