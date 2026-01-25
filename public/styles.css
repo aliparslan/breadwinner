@@ -1631,3 +1631,10 @@ tr:hover .actions {
   color: var(--text-main);
   font-feature-settings: "tnum";
 }
+
+/* Hide tooltips on mobile */
+@media screen and (max-width: 600px) {
+  .viz-tooltip {
+    display: none !important;
+  }
+}
