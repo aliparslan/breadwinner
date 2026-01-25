@@ -414,9 +414,12 @@ button.secondary:hover {
   flex: 2; 
   margin-bottom: 0; 
   height: 44px;
-  background: #fafaf9;
+  padding: 0 16px; /* Use line-height/height for centering */
+  background: white;
   border: 1px solid var(--border);
   border-radius: 10px;
+  font-size: 0.9rem;
+  line-height: 44px; /* Ensure vertical centering */
   transition: all 0.2s ease;
 }
 
@@ -430,9 +433,14 @@ button.secondary:hover {
   flex: 1; 
   margin-bottom: 0; 
   height: 44px;
+  /* Reset padding for select to accommodate fixed height */
+  padding-top: 0;
+  padding-bottom: 0;
+  line-height: 44px;
   background: white; /* Match input background */
   border: 1px solid var(--border);
   border-radius: 10px;
+  font-size: 0.9rem;
   appearance: none;
   -webkit-appearance: none;
   padding-right: 32px;
@@ -583,7 +591,7 @@ td:nth-child(4) { /* Amt */
   display: inline-flex; gap: 6px; align-items: center;
   border-radius: 8px; justify-content: center;
   transition: all 0.2s;
-  font-size: 0.85rem;
+  font-size: 0.9rem;
 }
 #trigger-upload-btn:hover {
   border-color: var(--primary); color: var(--primary);
@@ -869,11 +877,7 @@ tr:hover .actions {
   }
   
   /* Mobile Search Bar */
-  .filter-bar input {
-    background: white;
-    border: 1px solid var(--border);
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-  }
+
   
   /* Month Header Mobile Overrides */
 
@@ -890,13 +894,10 @@ tr:hover .actions {
   }
   .filter-bar input {
     flex: 2;
-    height: 38px;
-    font-size: 0.85rem;
+    /* height/font-size removed to fix cutoff */
   }
   .filter-bar select {
     flex: 1;
-    height: 38px;
-    font-size: 0.85rem;
   }
 
   thead {
