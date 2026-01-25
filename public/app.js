@@ -1,24 +1,3 @@
-// --- CONFIGURATION ---
-// Config loaded from config.js
-
-
-// --- CATEGORY COLORS ---
-// Loaded from config.js
-
-
-// --- HELPER: TOAST NOTIFICATIONS ---
-// Loaded from utils.js
-
-
-// --- HELPER: LOADING OVERLAY ---
-// Loaded from utils.js
-
-
-// --- HELPER: FORMATTING ---
-// Loaded from utils.js
-
-
-// --- CORE LOGIC ---
 let allCategories = [];
 let allTransactions = [];
 
