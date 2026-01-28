@@ -827,16 +827,42 @@ tr:hover .actions {
 /* --- MOBILE OPTIMIZATION --- */
 @media screen and (max-width: 600px) {
   #app-container {
-    padding: 12px;
+    padding: 20px 12px;
+    min-height: 100dvh;
+    justify-content: center; /* Center vertically */
   }
 
   .auth-container {
     margin: auto; /* Ensure centering on mobile */
-    width: 90%; 
-    padding: 40px 24px; 
+    width: 90%;
+    max-width: 100%;
+    padding: 32px 20px; /* Reduced padding for mobile */
     left: 0; right: 0; /* Clear any positioning artifacts */
     transform: none;
     position: relative;
+  }
+
+  /* Reduce spacing in auth elements on mobile */
+  .auth-container h1 {
+    font-size: 1.75rem;
+    margin-bottom: 0.25rem;
+  }
+
+  .auth-container h1 span {
+    font-size: 2rem !important; /* Smaller emoji icon */
+  }
+
+  .auth-container .subtitle {
+    margin-bottom: 6px;
+    font-size: 0.95rem;
+  }
+
+  .auth-buttons {
+    margin-top: 1.25rem; /* Tighter spacing */
+  }
+
+  .input-label {
+    margin: 12px 0 6px 0; /* Tighter spacing */
   }
 
   /* Fixed Mobile Navbar */
