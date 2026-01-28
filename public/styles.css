@@ -70,15 +70,15 @@ input, select {
 /* --- AUTH --- */
 /* --- AUTH --- */
 .auth-container {
-  max-width: 380px; 
-  width: 90%; 
-  padding: 40px 30px; /* Reduced for compactness */
-  background: var(--bg-card); 
-  border-radius: 24px;
+  max-width: 380px;
+  width: 90%;
+  padding: 28px 24px; /* Further reduced for mobile */
+  background: var(--bg-card);
+  border-radius: 20px;
   box-shadow: 0 30px 60px -15px rgba(0,0,0,0.1);
   border: 1.5px solid var(--border);
   text-align: center;
-  
+
   /* Flex Centering (Robust against footer overlap) */
   position: relative;
   margin: auto;
@@ -118,7 +118,11 @@ input, select {
 /* --- AUTH --- */
 
 .auth-container h1 {
-  font-size: 2rem; margin-bottom: 0.25rem; color: var(--primary); font-weight: 800;
+  font-size: 1.85rem; margin-bottom: 0.2rem; color: var(--primary); font-weight: 800;
+}
+.auth-container h1 span {
+  display: inline-block;
+  margin-bottom: 6px;
 }
 .auth-buttons {
   margin-top: 1.5rem; /* Reduced space */
@@ -826,43 +830,88 @@ tr:hover .actions {
 
 /* --- MOBILE OPTIMIZATION --- */
 @media screen and (max-width: 600px) {
+  body {
+    min-height: 100vh;
+    min-height: 100dvh; /* Use dynamic viewport height */
+  }
+
   #app-container {
-    padding: 20px 12px;
-    min-height: 100dvh;
+    padding: 16px 12px;
+    min-height: auto; /* Remove min-height to allow natural sizing */
     justify-content: center; /* Center vertically */
   }
 
   .auth-container {
-    margin: auto; /* Ensure centering on mobile */
-    width: 90%;
-    max-width: 100%;
-    padding: 32px 20px; /* Reduced padding for mobile */
+    margin: 0 auto; /* Ensure centering on mobile */
+    width: calc(100% - 24px); /* Account for padding */
+    max-width: 360px;
+    padding: 32px 24px; /* Balanced padding */
     left: 0; right: 0; /* Clear any positioning artifacts */
     transform: none;
     position: relative;
+    border-radius: 20px; /* Slightly less rounded on mobile */
   }
 
   /* Reduce spacing in auth elements on mobile */
   .auth-container h1 {
-    font-size: 1.75rem;
-    margin-bottom: 0.25rem;
+    font-size: 1.65rem;
+    margin-bottom: 8px;
+    line-height: 1.15;
   }
 
   .auth-container h1 span {
-    font-size: 2rem !important; /* Smaller emoji icon */
+    font-size: 1.9rem !important; /* Smaller emoji icon */
+    margin-bottom: 6px;
   }
 
   .auth-container .subtitle {
-    margin-bottom: 6px;
-    font-size: 0.95rem;
+    margin-bottom: 8px;
+    font-size: 0.9rem;
+    line-height: 1.4;
+  }
+
+  /* "What is this?" link on mobile */
+  .auth-container div[style*="margin-bottom"] {
+    margin-bottom: 16px !important;
+    margin-top: 0 !important;
+  }
+
+  .auth-container div[style*="margin-bottom"] a {
+    font-size: 0.8rem !important;
   }
 
   .auth-buttons {
-    margin-top: 1.25rem; /* Tighter spacing */
+    margin-top: 16px; /* Consistent spacing */
+    gap: 10px;
+  }
+
+  .auth-buttons button {
+    padding: 11px 16px;
+    font-size: 0.9rem;
   }
 
   .input-label {
-    margin: 12px 0 6px 0; /* Tighter spacing */
+    margin: 16px 0 6px 0;
+    font-size: 0.7rem;
+  }
+
+  .auth-container input[type="email"],
+  .auth-container input[type="password"] {
+    padding: 11px 12px;
+    font-size: 16px !important; /* Prevent zoom on iOS */
+    margin-bottom: 0;
+  }
+
+  .error-msg {
+    margin-top: 12px;
+    font-size: 0.875rem;
+  }
+
+  /* Ensure footer doesn't interfere */
+  .site-footer {
+    margin-top: 24px;
+    padding: 20px 0 32px;
+    padding-bottom: max(32px, env(safe-area-inset-bottom));
   }
 
   /* Fixed Mobile Navbar */
