@@ -916,6 +916,13 @@ function updateUI(s) {
     document.getElementById("app-section").classList.remove("hidden");
     document.getElementById("user-email").innerText = s.user.email;
   } else {
+    // Redirect unauthenticated users to landing page
+    // Unless they're explicitly trying to log in (check URL param)
+    const urlParams = new URLSearchParams(window.location.search);
+    if (!urlParams.has('login')) {
+      window.location.href = '/landing.html';
+      return;
+    }
     document.getElementById("auth-section").classList.remove("hidden");
     document.getElementById("app-section").classList.add("hidden");
   }
