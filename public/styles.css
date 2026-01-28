@@ -550,7 +550,7 @@ tbody tr:nth-child(even) {
 }
 tbody tr:hover {
   background-color: #ffffff;
-  box-shadow: inset 0 0 0 1px var(--primary), 0 4px 12px rgba(74, 59, 50, 0.1);
+  box-shadow: inset 0 0 0 1px rgba(74, 59, 50, 0.5), 0 4px 12px rgba(74, 59, 50, 0.1);
   position: relative;
   z-index: 10;
   transition: all 0.2s ease;
@@ -1448,7 +1448,7 @@ tr:hover .actions {
   cursor: pointer; /* Clickable */
 }
 .viz-item:hover {
-  border-color: var(--primary); /* Darker outline for clarity */
+  border-color: rgba(74, 59, 50, 0.5); /* Softened outline */
   box-shadow: 0 4px 12px rgba(74, 59, 50, 0.15);
 }
 
