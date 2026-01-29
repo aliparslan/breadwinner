@@ -47,7 +47,7 @@ const MOCK_SPENDING_DATA = {
   income: 5200.00,
   net: 2352.68,
   spendingChange: -12,
-  incomeChange: 0,
+  incomeChange: 5,
   netChange: 18,
   categories: [
     { name: "Housing", amount: 1200.00, percent: 42.1, color: DEMO_CATEGORY_COLORS["Housing"] },
