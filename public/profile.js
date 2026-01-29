@@ -177,13 +177,46 @@ async function confirmReset() {
 async function confirmDeleteAccount() {
   if (!confirm("DANGER: This will permanently delete your account and all data. Are you sure?")) return;
 
-  // Note: Supabase Client cannot delete the Auth User itself without a Service Key.
-  // We will delete their data, sign them out, and ideally you'd have an Edge Function to clean up Auth.
-  // For this implementation, we wipe data and sign out.
+  // Double confirmation for safety
+  if (!confirm("This action cannot be undone. Are you sure you want to proceed?")) return;
 
-  await confirmReset(); // Wipe data first
-  await client.auth.signOut();
-  window.location.href = "/";
+  showToast("Deleting account...", "loading");
+
+  const { data: { session } } = await client.auth.getSession();
+  if (!session) {
+    showToast("Not authenticated", "error");
+    return;
+  }
+
+  try {
+    // Call the server-side delete account endpoint
+    const res = await fetch("/api/delete-account", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${session.access_token}`,
+        "Content-Type": "application/json"
+      },
+    });
+
+    const data = await res.json();
+
+    if (!res.ok || data.error) {
+      showToast("Failed to delete account: " + (data.error || "Unknown error"), "error");
+      return;
+    }
+
+    // Account deleted successfully, sign out and redirect
+    showToast("Account deleted successfully", "success");
+    await client.auth.signOut();
+
+    setTimeout(() => {
+      window.location.href = "/";
+    }, 1000);
+
+  } catch (error) {
+    console.error("Delete account error:", error);
+    showToast("Failed to delete account", "error");
+  }
 }
 
 init();
