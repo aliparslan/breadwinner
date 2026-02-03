@@ -441,14 +441,14 @@ function renderVizForMonth(monthIndex) {
       </div>
       <div class="stat-cards-row">
         <div class="stat-card">
-          <span class="stat-card-label">Spending</span>
+          <span class="stat-card-label">Money Out</span>
           <div class="stat-card-row">
             <span class="stat-card-value">${formatCurrency(periodExpense, true)}</span>
             ${getTickerHtml(periodExpense, prevExpenseVal, true)}
           </div>
         </div>
         <div class="stat-card">
-          <span class="stat-card-label">Income</span>
+          <span class="stat-card-label">Money In</span>
           <div class="stat-card-row">
             <span class="stat-card-value positive">${formatCurrency(periodIncome, true)}</span>
             ${getTickerHtml(periodIncome, prevIncomeVal, false)}

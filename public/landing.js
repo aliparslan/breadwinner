@@ -107,14 +107,14 @@ function renderVizDemo() {
   const statCardsHTML = `
     <div class="stat-cards-row">
       <div class="stat-card">
-        <span class="stat-card-label">Spending</span>
+        <span class="stat-card-label">Money Out</span>
         <div class="stat-card-row">
           <span class="stat-card-value">${formatCurrency(data.spending)}</span>
           ${spendingTicker}
         </div>
       </div>
       <div class="stat-card">
-        <span class="stat-card-label">Income</span>
+        <span class="stat-card-label">Money In</span>
         <div class="stat-card-row">
           <span class="stat-card-value positive">${formatCurrency(data.income)}</span>
           ${incomeTicker}
