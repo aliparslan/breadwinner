@@ -54,11 +54,30 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
       if (rawText) {
         // FAST MODE
         const prompt = `
-            Extract date, description, and amount for every transaction from this bank statement text.
-            RULES:
-            1. Spending is NEGATIVE. Deposits are POSITIVE.
-            2. Categorize into: [${categoryNames}]. Use "Other" if unsure.
-            3. Return ONLY raw JSON array: [{ "date": "YYYY-MM-DD", "description": "txt", "amount": -10.00, "category": "ExactName" }]
+            Extract date, description, and amount for every transaction from this bank/credit card statement text.
+            
+            CRITICAL RULES FOR AMOUNT INTERPRETATION:
+            1. First, identify the statement type:
+               - BANK ACCOUNT (checking/savings): Look for "Balance", "Debit", "Credit" labels, account balances
+               - CREDIT CARD: Look for "Payments, Credits and Adjustments", "Transactions", "Amount Owed"
+            
+            2. Apply the CORRECT sign convention based on statement type:
+               
+               FOR BANK ACCOUNTS:
+               - Debits/Spending/Purchases = NEGATIVE amounts (money leaving account)
+               - Credits/Deposits/Income = POSITIVE amounts (money entering account)
+               - If the statement shows "- $50.00" under Debit → use -50.00
+               - If the statement shows "+ $1000.00" under Credit → use 1000.00
+               
+               FOR CREDIT CARDS:
+               - Payments/Credits (reduces balance owed) = POSITIVE amounts (treats as income/credit to your finances)
+               - Purchases/Charges/Transactions = NEGATIVE amounts (spending/debits from your finances)
+               - If the statement shows "- $158.17" under "Payments, Credits and Adjustments" → use +158.17 (it's a payment, which is good)
+               - If the statement shows "$84.80" under "Transactions" → use -84.80 (it's a charge, which is spending)
+            
+            3. Categorize into: [${categoryNames}]. Use "Other" if unsure. Income-like transactions (salary, deposits, payments received, refunds) should not be categorized as expenses.
+            
+            4. Return ONLY raw JSON array: [{ "date": "YYYY-MM-DD", "description": "txt", "amount": -10.00, "category": "ExactName" }]
             
             TEXT:
             ${rawText}
@@ -68,7 +87,23 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
         // SLOW MODE (Vision)
         const arrayBuffer = await file.arrayBuffer();
         const base64Data = btoa(new Uint8Array(arrayBuffer).reduce((data, byte) => data + String.fromCharCode(byte), ""));
-        const prompt = `Extract transactions. Spending=Negative. Categories: [${categoryNames}]. Return JSON array.`;
+        const prompt = `
+          Extract all transactions from this bank/credit card statement image.
+          
+          CRITICAL: Identify if this is a BANK ACCOUNT or CREDIT CARD statement:
+          
+          BANK ACCOUNT signs:
+          - Shows account balance, "Debit"/"Credit" labels
+          - Debits/Spending = NEGATIVE (e.g., "- $50" under Debit → -50.00)
+          - Credits/Deposits = POSITIVE (e.g., "+ $1000" under Credit → +1000.00)
+          
+          CREDIT CARD signs:
+          - Headers like "Payments, Credits and Adjustments" or "Transactions"
+          - Payments = POSITIVE amounts even if shown as negative (e.g., "- $158" in Payments section → +158.00)
+          - Charges/Purchases = NEGATIVE amounts even if shown as positive (e.g., "$84.80" in Transactions → -84.80)
+          
+          Categories: [${categoryNames}]. Return JSON: [{"date":"YYYY-MM-DD","description":"text","amount":number,"category":"name"}]
+        `;
 
         result = await model.generateContent([prompt, { inlineData: { data: base64Data, mimeType: file.type } }]);
       }
