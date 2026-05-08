@@ -1,46 +1,16 @@
 let allCategories = [];
 let allTransactions = [];
 
-let auth0Client = null;
-let auth0ReadyPromise = null;
-let auth0Config = null;
+async function getAuthToken() {
+  const {
+    data: { session },
+  } = await client.auth.getSession();
 
-async function getAuth0Client() {
-  if (!auth0ReadyPromise) {
-    auth0ReadyPromise = (async () => {
-      const res = await fetch("/api/public-config");
-      if (!res.ok) {
-        throw new Error(`Failed to load auth config: ${await res.text()}`);
-      }
-
-      auth0Config = await res.json();
-      if (!auth0Config.auth0Domain || !auth0Config.auth0ClientId || !auth0Config.auth0Audience) {
-        throw new Error("Missing Auth0 configuration");
-      }
-
-      auth0Client = await window.auth0.createAuth0Client({
-        domain: auth0Config.auth0Domain,
-        clientId: auth0Config.auth0ClientId,
-        authorizationParams: {
-          audience: auth0Config.auth0Audience,
-          redirect_uri: `${window.location.origin}/`,
-        },
-      });
-
-      return auth0Client;
-    })();
+  if (!session) {
+    throw new Error("No active session");
   }
 
-  return auth0ReadyPromise;
-}
-
-async function getAuthToken() {
-  const client = await getAuth0Client();
-  return await client.getTokenSilently({
-    authorizationParams: {
-      audience: auth0Config.auth0Audience,
-    },
-  });
+  return session.access_token;
 }
 
 async function apiFetch(url, options = {}) {
@@ -881,69 +851,70 @@ document.getElementById("refresh-insights-btn")?.addEventListener("click", () =>
   fetchInsights(true);
 });
 
-// --- AUTH ---
+function handleLoginEnter(e) {
+  if (e.key === "Enter") document.getElementById("login-btn").click();
+}
+document.getElementById("email")?.addEventListener("keypress", handleLoginEnter);
+document.getElementById("password")?.addEventListener("keypress", handleLoginEnter);
+
+document.getElementById("login-btn").onclick = async () => {
+  const email = document.getElementById("email").value;
+  const password = document.getElementById("password").value;
+  toggleLoading(true);
+  const { error } = await client.auth.signInWithPassword({ email, password });
+  if (error) {
+    document.getElementById("msg").innerText = error.message;
+    toggleLoading(false);
+  } else {
+    checkUser();
+  }
+};
+
+document.getElementById("signup-btn").onclick = async () => {
+  const email = document.getElementById("email").value;
+  const password = document.getElementById("password").value;
+  toggleLoading(true);
+  const { error } = await client.auth.signUp({ email, password });
+  toggleLoading(false);
+  if (error) {
+    document.getElementById("msg").innerText = error.message;
+  } else {
+    alert("Check your email for the confirmation link.");
+  }
+};
+
 async function checkUser() {
   toggleLoading(true);
   try {
-    const client = await getAuth0Client();
-    const urlParams = new URLSearchParams(window.location.search);
-
-    if (urlParams.has("code") && urlParams.has("state")) {
-      await client.handleRedirectCallback();
-      window.history.replaceState({}, document.title, window.location.pathname);
+    const {
+      data: { session },
+    } = await client.auth.getSession();
+    updateUI(session);
+    if (session) {
+      await fetchTransactions();
+      fetchInsights();
     }
-
-    if (!(await client.isAuthenticated())) {
-      if (!urlParams.has("login")) {
-        window.location.href = "/landing.html";
-        return;
-      }
-      document.getElementById("auth-section").classList.remove("hidden");
-      document.getElementById("app-section").classList.add("hidden");
-      document.getElementById("login-btn").onclick = async () => {
-        await client.loginWithRedirect({
-          authorizationParams: {
-            audience: auth0Config.auth0Audience,
-            redirect_uri: `${window.location.origin}/`,
-          },
-        });
-      };
-      document.getElementById("signup-btn").onclick = async () => {
-        await client.loginWithRedirect({
-          authorizationParams: {
-            audience: auth0Config.auth0Audience,
-            redirect_uri: `${window.location.origin}/`,
-            screen_hint: "signup",
-          },
-        });
-      };
-      toggleLoading(false);
-      return;
-    }
-
-    updateUI(await client.getUser());
-    await fetchTransactions();
-    fetchInsights();
   } catch (err) {
     console.error("Initialization error:", err);
     showToast("Failed to load application", "error");
-    const authSection = document.getElementById("auth-section");
-    const appSection = document.getElementById("app-section");
-    if (authSection && appSection) {
-      authSection.classList.remove("hidden");
-      appSection.classList.add("hidden");
-    }
   } finally {
     toggleLoading(false);
   }
 }
 
-function updateUI(user) {
-  if (user) {
+function updateUI(session) {
+  if (session) {
     document.getElementById("auth-section").classList.add("hidden");
     document.getElementById("app-section").classList.remove("hidden");
-    const email = user.email || "";
-    document.getElementById("user-email").innerText = email;
+    document.getElementById("user-email").innerText = session.user.email;
+  } else {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (!urlParams.has("login")) {
+      window.location.href = "/landing.html";
+      return;
+    }
+    document.getElementById("auth-section").classList.remove("hidden");
+    document.getElementById("app-section").classList.add("hidden");
   }
 }
 
@@ -965,12 +936,9 @@ document.addEventListener("click", (e) => {
 
 document.getElementById("logout-btn").onclick = async () => {
   toggleLoading(true);
-  const client = await getAuth0Client();
-  await client.logout({
-    logoutParams: {
-      returnTo: `${window.location.origin}/landing.html`,
-    },
-  });
+  await client.auth.signOut();
+  updateUI(null);
+  toggleLoading(false);
 };
 
 document.addEventListener("keydown", (e) => {

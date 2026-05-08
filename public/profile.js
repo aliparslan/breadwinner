@@ -1,43 +1,13 @@
-let auth0Client = null;
-let auth0ReadyPromise = null;
-let auth0Config = null;
+async function getAuthToken() {
+  const {
+    data: { session },
+  } = await client.auth.getSession();
 
-async function getAuth0Client() {
-  if (!auth0ReadyPromise) {
-    auth0ReadyPromise = (async () => {
-      const res = await fetch("/api/public-config");
-      if (!res.ok) {
-        throw new Error(`Failed to load auth config: ${await res.text()}`);
-      }
-
-      auth0Config = await res.json();
-      if (!auth0Config.auth0Domain || !auth0Config.auth0ClientId || !auth0Config.auth0Audience) {
-        throw new Error("Missing Auth0 configuration");
-      }
-
-      auth0Client = await window.auth0.createAuth0Client({
-        domain: auth0Config.auth0Domain,
-        clientId: auth0Config.auth0ClientId,
-        authorizationParams: {
-          audience: auth0Config.auth0Audience,
-          redirect_uri: `${window.location.origin}/`,
-        },
-      });
-
-      return auth0Client;
-    })();
+  if (!session) {
+    throw new Error("No active session");
   }
 
-  return auth0ReadyPromise;
-}
-
-async function getAuthToken() {
-  const client = await getAuth0Client();
-  return await client.getTokenSilently({
-    authorizationParams: {
-      audience: auth0Config.auth0Audience,
-    },
-  });
+  return session.access_token;
 }
 
 async function apiFetch(url, options = {}) {
@@ -54,15 +24,16 @@ async function apiFetch(url, options = {}) {
 async function init() {
   toggleLoading(true);
   try {
-    const client = await getAuth0Client();
+    const {
+      data: { session },
+    } = await client.auth.getSession();
 
-    if (!(await client.isAuthenticated())) {
+    if (!session) {
       window.location.href = "/?login";
       return;
     }
 
-    const user = await client.getUser();
-    const email = user?.email || "";
+    const email = session.user.email || "";
     const emailDisplay = document.getElementById("profile-email-display");
     if (emailDisplay) emailDisplay.innerText = email;
     const emailAccount = document.getElementById("profile-email-account");
@@ -79,11 +50,7 @@ async function init() {
 
     document.getElementById("logout-btn").onclick = async () => {
       toggleLoading(true);
-      await client.logout({
-        logoutParams: {
-          returnTo: `${window.location.origin}/landing.html`,
-        },
-      });
+      await client.auth.signOut();
       window.location.href = "/";
     };
   } catch (e) {
@@ -183,12 +150,7 @@ async function confirmDeleteAccount() {
     await apiFetch("/api/delete-account", { method: "POST" });
 
     showToast("App data deleted successfully", "success");
-    const client = await getAuth0Client();
-    await client.logout({
-      logoutParams: {
-        returnTo: `${window.location.origin}/landing.html`,
-      },
-    });
+    await client.auth.signOut();
     setTimeout(() => {
       window.location.href = "/landing.html";
     }, 1000);

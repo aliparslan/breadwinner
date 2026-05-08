@@ -1,19 +1,15 @@
-import { createRemoteJWKSet, jwtVerify } from "jose";
+import { createClient } from "@supabase/supabase-js";
+
+const SUPABASE_URL = "https://ahvfdteobwmrqkiorhpv.supabase.co";
+const SUPABASE_KEY =
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFodmZkdGVvYndtcnFraW9yaHB2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjgyNzI5NzMsImV4cCI6MjA4Mzg0ODk3M30.2K314udaXPAKiWalxXLNmZHqvv9YQ7iQnUtYyONTPrI";
 
 interface Env {
   DB: D1Database;
-  AUTH0_DOMAIN: string;
-  AUTH0_CLIENT_ID: string;
-  AUTH0_AUDIENCE: string;
   GEMINI_API_KEY: string;
 }
 
-const PUBLIC_ROUTES = ["/api/public-config", "/api/validate-key"];
-
-function getIssuer(domain: string) {
-  const normalized = domain.replace(/^https?:\/\//, "").replace(/\/+$/, "");
-  return `https://${normalized}/`;
-}
+const PUBLIC_ROUTES = ["/api/validate-key"];
 
 export const onRequest: PagesFunction<Env> = async (context) => {
   const url = new URL(context.request.url);
@@ -32,13 +28,28 @@ export const onRequest: PagesFunction<Env> = async (context) => {
 
   const token = authHeader.slice(7);
   try {
-    const issuer = getIssuer(context.env.AUTH0_DOMAIN);
-    const jwks = createRemoteJWKSet(new URL(`${issuer}.well-known/jwks.json`));
-    const { payload } = await jwtVerify(token, jwks, {
-      issuer,
-      audience: context.env.AUTH0_AUDIENCE,
+    const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
+      global: {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      },
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+      },
     });
-    context.data.userId = payload.sub;
+
+    const {
+      data: { user },
+      error,
+    } = await supabase.auth.getUser();
+
+    if (error || !user) {
+      throw new Error("Invalid user");
+    }
+
+    context.data.userId = user.id;
     return context.next();
   } catch {
     return new Response(JSON.stringify({ error: "Invalid token" }), {
