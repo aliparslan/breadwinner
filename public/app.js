@@ -1,37 +1,46 @@
 let allCategories = [];
 let allTransactions = [];
 
-let clerk = null;
-let clerkReadyPromise = null;
+let auth0Client = null;
+let auth0ReadyPromise = null;
+let auth0Config = null;
 
-async function getClerk() {
-  if (!clerkReadyPromise) {
-    clerkReadyPromise = (async () => {
+async function getAuth0Client() {
+  if (!auth0ReadyPromise) {
+    auth0ReadyPromise = (async () => {
       const res = await fetch("/api/public-config");
       if (!res.ok) {
         throw new Error(`Failed to load auth config: ${await res.text()}`);
       }
 
-      const { clerkPublishableKey } = await res.json();
-      if (!clerkPublishableKey) {
-        throw new Error("Missing Clerk publishable key");
+      auth0Config = await res.json();
+      if (!auth0Config.auth0Domain || !auth0Config.auth0ClientId || !auth0Config.auth0Audience) {
+        throw new Error("Missing Auth0 configuration");
       }
 
-      clerk = new window.Clerk(clerkPublishableKey);
-      await clerk.load();
-      return clerk;
+      auth0Client = await window.auth0.createAuth0Client({
+        domain: auth0Config.auth0Domain,
+        clientId: auth0Config.auth0ClientId,
+        authorizationParams: {
+          audience: auth0Config.auth0Audience,
+          redirect_uri: `${window.location.origin}/`,
+        },
+      });
+
+      return auth0Client;
     })();
   }
 
-  return clerkReadyPromise;
+  return auth0ReadyPromise;
 }
 
 async function getAuthToken() {
-  const activeClerk = await getClerk();
-  if (!activeClerk.session) {
-    throw new Error("No active session");
-  }
-  return await activeClerk.session.getToken();
+  const client = await getAuth0Client();
+  return await client.getTokenSilently({
+    authorizationParams: {
+      audience: auth0Config.auth0Audience,
+    },
+  });
 }
 
 async function apiFetch(url, options = {}) {
@@ -876,26 +885,43 @@ document.getElementById("refresh-insights-btn")?.addEventListener("click", () =>
 async function checkUser() {
   toggleLoading(true);
   try {
-    const activeClerk = await getClerk();
+    const client = await getAuth0Client();
+    const urlParams = new URLSearchParams(window.location.search);
 
-    if (!activeClerk.user) {
-      const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.has("code") && urlParams.has("state")) {
+      await client.handleRedirectCallback();
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+
+    if (!(await client.isAuthenticated())) {
       if (!urlParams.has("login")) {
         window.location.href = "/landing.html";
         return;
       }
       document.getElementById("auth-section").classList.remove("hidden");
       document.getElementById("app-section").classList.add("hidden");
-      activeClerk.mountSignIn(document.getElementById("clerk-sign-in"));
+      document.getElementById("login-btn").onclick = async () => {
+        await client.loginWithRedirect({
+          authorizationParams: {
+            audience: auth0Config.auth0Audience,
+            redirect_uri: `${window.location.origin}/`,
+          },
+        });
+      };
+      document.getElementById("signup-btn").onclick = async () => {
+        await client.loginWithRedirect({
+          authorizationParams: {
+            audience: auth0Config.auth0Audience,
+            redirect_uri: `${window.location.origin}/`,
+            screen_hint: "signup",
+          },
+        });
+      };
       toggleLoading(false);
       return;
     }
 
-    activeClerk.addListener(({ user }) => {
-      if (!user) window.location.href = "/landing.html";
-    });
-
-    updateUI(activeClerk.user);
+    updateUI(await client.getUser());
     await fetchTransactions();
     fetchInsights();
   } catch (err) {
@@ -916,7 +942,7 @@ function updateUI(user) {
   if (user) {
     document.getElementById("auth-section").classList.add("hidden");
     document.getElementById("app-section").classList.remove("hidden");
-    const email = user.emailAddresses?.[0]?.emailAddress || "";
+    const email = user.email || "";
     document.getElementById("user-email").innerText = email;
   }
 }
@@ -939,9 +965,12 @@ document.addEventListener("click", (e) => {
 
 document.getElementById("logout-btn").onclick = async () => {
   toggleLoading(true);
-  const activeClerk = await getClerk();
-  await activeClerk.signOut();
-  window.location.href = "/landing.html";
+  const client = await getAuth0Client();
+  await client.logout({
+    logoutParams: {
+      returnTo: `${window.location.origin}/landing.html`,
+    },
+  });
 };
 
 document.addEventListener("keydown", (e) => {

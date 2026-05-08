@@ -7,7 +7,7 @@
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🍞</text></svg>" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 
-    <script src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@5/dist/clerk.browser.js"></script>
+    <script src="https://cdn.auth0.com/js/auth0-spa-js/2.4/auth0-spa-js.production.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script>
       pdfjsLib.GlobalWorkerOptions.workerSrc =
@@ -23,8 +23,16 @@
 
     <div id="app-container">
       <div id="auth-section" class="auth-container hidden">
-  <div id="clerk-sign-in"></div>
-</div>
+        <h1><span style="font-size: 2.5rem">🍞</span><br />Breadwinner</h1>
+        <p class="subtitle">Make cents of your spending!</p>
+        <p id="auth-message" style="color: var(--text-secondary); margin-bottom: 20px;">
+          Sign in or create an account with Auth0 to start tracking.
+        </p>
+        <div class="auth-buttons">
+          <button id="login-btn" class="primary-btn">Sign In</button>
+          <button id="signup-btn" class="secondary">Create Account</button>
+        </div>
+      </div>
 <!-- About Modal -->
 <div id="about-modal" class="modal-overlay hidden">
   <div class="modal">

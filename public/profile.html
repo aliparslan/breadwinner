@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>Settings | Breadwinner</title>
-    <script src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@5/dist/clerk.browser.js"></script>
+    <script src="https://cdn.auth0.com/js/auth0-spa-js/2.4/auth0-spa-js.production.js"></script>
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
@@ -35,10 +35,9 @@
     <div>
       <p id="profile-email-account" style="font-weight: 600; margin: 0;"></p>
       <p style="font-size: 0.85rem; color: var(--text-secondary); margin: 4px 0 0 0;">
-        Manage your email, password, and security via Clerk.
+        Your login is handled by Auth0. This page manages only app-specific settings.
       </p>
     </div>
-    <button class="secondary" id="manage-account-btn">Manage Account</button>
   </div>
 </div>
 
@@ -85,9 +84,9 @@
 
       <div class="settings-row" style="border-bottom: none;">
           <div>
-            <h4 style="color: var(--accent-red); margin: 0 0 4px 0;">Delete Account</h4>
+            <h4 style="color: var(--accent-red); margin: 0 0 4px 0;">Delete App Data</h4>
             <span style="font-size: 0.85rem; color: var(--text-muted);">
-              Permanently remove your account and data.
+              Permanently remove your Breadwinner data and sign out.
             </span>
           </div>
           <button class="primary-btn" style="background-color: var(--accent-red); border: none;" onclick="confirmDeleteAccount()">

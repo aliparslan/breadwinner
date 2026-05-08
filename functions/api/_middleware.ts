@@ -1,13 +1,19 @@
-import { verifyToken } from "@clerk/backend";
+import { createRemoteJWKSet, jwtVerify } from "jose";
 
 interface Env {
   DB: D1Database;
-  CLERK_SECRET_KEY: string;
-  CLERK_PUBLISHABLE_KEY: string;
+  AUTH0_DOMAIN: string;
+  AUTH0_CLIENT_ID: string;
+  AUTH0_AUDIENCE: string;
   GEMINI_API_KEY: string;
 }
 
 const PUBLIC_ROUTES = ["/api/public-config", "/api/validate-key"];
+
+function getIssuer(domain: string) {
+  const normalized = domain.replace(/^https?:\/\//, "").replace(/\/+$/, "");
+  return `https://${normalized}/`;
+}
 
 export const onRequest: PagesFunction<Env> = async (context) => {
   const url = new URL(context.request.url);
@@ -26,8 +32,11 @@ export const onRequest: PagesFunction<Env> = async (context) => {
 
   const token = authHeader.slice(7);
   try {
-    const payload = await verifyToken(token, {
-      secretKey: context.env.CLERK_SECRET_KEY,
+    const issuer = getIssuer(context.env.AUTH0_DOMAIN);
+    const jwks = createRemoteJWKSet(new URL(`${issuer}.well-known/jwks.json`));
+    const { payload } = await jwtVerify(token, jwks, {
+      issuer,
+      audience: context.env.AUTH0_AUDIENCE,
     });
     context.data.userId = payload.sub;
     return context.next();

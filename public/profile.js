@@ -1,34 +1,43 @@
-let clerk = null;
-let clerkReadyPromise = null;
+let auth0Client = null;
+let auth0ReadyPromise = null;
+let auth0Config = null;
 
-async function getClerk() {
-  if (!clerkReadyPromise) {
-    clerkReadyPromise = (async () => {
+async function getAuth0Client() {
+  if (!auth0ReadyPromise) {
+    auth0ReadyPromise = (async () => {
       const res = await fetch("/api/public-config");
       if (!res.ok) {
         throw new Error(`Failed to load auth config: ${await res.text()}`);
       }
 
-      const { clerkPublishableKey } = await res.json();
-      if (!clerkPublishableKey) {
-        throw new Error("Missing Clerk publishable key");
+      auth0Config = await res.json();
+      if (!auth0Config.auth0Domain || !auth0Config.auth0ClientId || !auth0Config.auth0Audience) {
+        throw new Error("Missing Auth0 configuration");
       }
 
-      clerk = new window.Clerk(clerkPublishableKey);
-      await clerk.load();
-      return clerk;
+      auth0Client = await window.auth0.createAuth0Client({
+        domain: auth0Config.auth0Domain,
+        clientId: auth0Config.auth0ClientId,
+        authorizationParams: {
+          audience: auth0Config.auth0Audience,
+          redirect_uri: `${window.location.origin}/`,
+        },
+      });
+
+      return auth0Client;
     })();
   }
 
-  return clerkReadyPromise;
+  return auth0ReadyPromise;
 }
 
 async function getAuthToken() {
-  const activeClerk = await getClerk();
-  if (!activeClerk.session) {
-    throw new Error("No active session");
-  }
-  return await activeClerk.session.getToken();
+  const client = await getAuth0Client();
+  return await client.getTokenSilently({
+    authorizationParams: {
+      audience: auth0Config.auth0Audience,
+    },
+  });
 }
 
 async function apiFetch(url, options = {}) {
@@ -45,14 +54,15 @@ async function apiFetch(url, options = {}) {
 async function init() {
   toggleLoading(true);
   try {
-    const activeClerk = await getClerk();
+    const client = await getAuth0Client();
 
-    if (!activeClerk.user) {
+    if (!(await client.isAuthenticated())) {
       window.location.href = "/?login";
       return;
     }
 
-    const email = activeClerk.user.emailAddresses?.[0]?.emailAddress || "";
+    const user = await client.getUser();
+    const email = user?.email || "";
     const emailDisplay = document.getElementById("profile-email-display");
     if (emailDisplay) emailDisplay.innerText = email;
     const emailAccount = document.getElementById("profile-email-account");
@@ -67,13 +77,13 @@ async function init() {
       console.error("Failed to load profile:", e);
     }
 
-    document.getElementById("manage-account-btn").onclick = () => {
-      activeClerk.openUserProfile();
-    };
-
     document.getElementById("logout-btn").onclick = async () => {
       toggleLoading(true);
-      await activeClerk.signOut();
+      await client.logout({
+        logoutParams: {
+          returnTo: `${window.location.origin}/landing.html`,
+        },
+      });
       window.location.href = "/";
     };
   } catch (e) {
@@ -163,18 +173,22 @@ async function confirmReset() {
 }
 
 async function confirmDeleteAccount() {
-  if (!confirm("DANGER: This will permanently delete your account and all data. Are you sure?"))
+  if (!confirm("DANGER: This will permanently delete your Breadwinner data and sign you out. Are you sure?"))
     return;
   if (!confirm("This action cannot be undone. Are you sure you want to proceed?")) return;
 
-  showToast("Deleting account...", "loading");
+  showToast("Deleting app data...", "loading");
 
   try {
     await apiFetch("/api/delete-account", { method: "POST" });
 
-    showToast("Account deleted successfully", "success");
-    const activeClerk = await getClerk();
-    await activeClerk.signOut();
+    showToast("App data deleted successfully", "success");
+    const client = await getAuth0Client();
+    await client.logout({
+      logoutParams: {
+        returnTo: `${window.location.origin}/landing.html`,
+      },
+    });
     setTimeout(() => {
       window.location.href = "/landing.html";
     }, 1000);
