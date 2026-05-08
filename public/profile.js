@@ -140,16 +140,16 @@ async function confirmReset() {
 }
 
 async function confirmDeleteAccount() {
-  if (!confirm("DANGER: This will permanently delete your Breadwinner data and sign you out. Are you sure?"))
+  if (!confirm("DANGER: This will permanently delete your account and all Breadwinner data. Are you sure?"))
     return;
   if (!confirm("This action cannot be undone. Are you sure you want to proceed?")) return;
 
-  showToast("Deleting app data...", "loading");
+  showToast("Deleting account...", "loading");
 
   try {
     await apiFetch("/api/delete-account", { method: "POST" });
 
-    showToast("App data deleted successfully", "success");
+    showToast("Account deleted successfully", "success");
     await client.auth.signOut();
     setTimeout(() => {
       window.location.href = "/landing.html";
