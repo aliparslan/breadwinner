@@ -40,3 +40,12 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env, data }) 
 
   return Response.json({ id: result.meta.last_row_id, ...body, user_id: userId });
 };
+
+export const onRequestDelete: PagesFunction<Env> = async ({ env, data }) => {
+  const userId = (data as any).userId;
+
+  await env.DB.prepare("DELETE FROM statement_logs WHERE user_id = ?").bind(userId).run();
+  await env.DB.prepare("DELETE FROM transactions WHERE user_id = ?").bind(userId).run();
+
+  return Response.json({ success: true });
+};
