@@ -1,9 +1,31 @@
 let allCategories = [];
 let allTransactions = [];
 
+const clerk = new window.Clerk(CLERK_PUBLISHABLE_KEY);
+
+async function getAuthToken() {
+  return await clerk.session.getToken();
+}
+
+async function apiFetch(url, options = {}) {
+  const token = await getAuthToken();
+  const headers = { Authorization: `Bearer ${token}`, ...options.headers };
+  const res = await fetch(url, { ...options, headers });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(text || res.statusText);
+  }
+  return res.json();
+}
+
 async function fetchTransactions() {
-  const { data: cats } = await client.from("categories").select("*").order("name");
-  allCategories = cats || [];
+  try {
+    allCategories = await apiFetch("/api/categories");
+  } catch (e) {
+    console.error(e);
+    showToast("Error loading categories", "error");
+    return;
+  }
 
   const filterSelect = document.getElementById("filter-category");
   const currentVal = filterSelect.value;
@@ -14,22 +36,18 @@ async function fetchTransactions() {
 
   filterSelect.value = currentVal;
 
-  const { data, error } = await client
-    .from("transactions")
-    .select(`*, categories ( id, name )`)
-    .order("date", { ascending: false });
-
-  if (error) {
-    console.error(error);
+  try {
+    const data = await apiFetch("/api/transactions");
+    allTransactions = data.map((tx) => ({
+      ...tx,
+      categoryName: tx.category_name || "Uncategorized",
+      categoryId: tx.category_id,
+    }));
+  } catch (e) {
+    console.error(e);
     showToast("Error loading data", "error");
     return;
   }
-
-  allTransactions = data.map((tx) => ({
-    ...tx,
-    categoryName: tx.categories ? tx.categories.name : "Uncategorized",
-    categoryId: tx.category_id,
-  }));
 
   applyFilters();
 }
@@ -44,7 +62,6 @@ function applyFilters() {
     return matchesSearch && matchesCat;
   });
 
-  // If the user is filtering (search or category), force expand months to show results
   const isFiltering = cat !== "all" || search.length > 0;
   renderDashboard(filtered, isFiltering);
 }
@@ -52,12 +69,10 @@ function applyFilters() {
 document.getElementById("filter-search").addEventListener("input", debounce(applyFilters, 300));
 document.getElementById("filter-category").addEventListener("change", applyFilters);
 
-// Global helper for visualization clicks
-window.filterByCategoryAndScroll = function(categoryName) {
+window.filterByCategoryAndScroll = function (categoryName) {
   const select = document.getElementById("filter-category");
   if (!select) return;
-  
-  // Find the option
+
   let found = false;
   for (let i = 0; i < select.options.length; i++) {
     if (select.options[i].value === categoryName) {
@@ -68,38 +83,36 @@ window.filterByCategoryAndScroll = function(categoryName) {
   }
 
   if (!found) {
-    // If it's "Other", it might be an aggregation, so just warn
     if (categoryName === "Other") {
-       showToast("Cannot filter by 'Other' group", "error");
+      showToast("Cannot filter by 'Other' group", "error");
     } else {
-       // Try to find case-insensitive match just in case
-       for (let i = 0; i < select.options.length; i++) {
-         if (select.options[i].value.toLowerCase() === categoryName.toLowerCase()) {
-           select.selectedIndex = i;
-           found = true;
-           break;
-         }
-       }
-       if (!found) showToast("Category not found in filter", "error");
+      for (let i = 0; i < select.options.length; i++) {
+        if (select.options[i].value.toLowerCase() === categoryName.toLowerCase()) {
+          select.selectedIndex = i;
+          found = true;
+          break;
+        }
+      }
+      if (!found) showToast("Category not found in filter", "error");
     }
     if (!found) return;
   }
-  
+
   applyFilters();
-  
+
   const target = document.querySelector(".transactions-header");
   if (target) {
-     target.scrollIntoView({ behavior: "smooth" });
+    target.scrollIntoView({ behavior: "smooth" });
   } else {
-     document.getElementById("tx-table-container")?.scrollIntoView({ behavior: "smooth" });
+    document.getElementById("tx-table-container")?.scrollIntoView({ behavior: "smooth" });
   }
 };
 
 // --- MONTHLY VIZ LOGIC ---
-let vizMonthsData = {}; // Global store for month data
-let vizSortedMonthKeys = []; // Sorted month keys
-let vizCurrentMonthIndex = 0; // Track currently selected month
-let vizAllTransactions = []; // Store all transactions for income/expense calculations
+let vizMonthsData = {};
+let vizSortedMonthKeys = [];
+let vizCurrentMonthIndex = 0;
+let vizAllTransactions = [];
 
 // --- TOOLTIP LOGIC ---
 let tooltipEl = null;
@@ -110,9 +123,9 @@ function showVizTooltip(e, content) {
     tooltipEl.className = "viz-tooltip";
     document.body.appendChild(tooltipEl);
   }
-  
+
   if (!content) return;
-  
+
   tooltipEl.innerHTML = content;
   tooltipEl.classList.add("visible");
   moveVizTooltip(e);
@@ -122,24 +135,20 @@ function moveVizTooltip(e) {
   if (!tooltipEl) return;
   const x = e.clientX;
   const y = e.clientY;
-  
-  // Prevent overflow on right edge
+
   const rect = tooltipEl.getBoundingClientRect();
   const winWidth = window.innerWidth;
-  
+
   let left = x;
   if (x + rect.width / 2 > winWidth - 10) {
     left = winWidth - rect.width / 2 - 10;
   } else if (x - rect.width / 2 < 10) {
     left = rect.width / 2 + 10;
   }
-  
+
   tooltipEl.style.left = `${left}px`;
   tooltipEl.style.top = `${y}px`;
-  
-  // Flip if too close to top
-  // Default is ABOVE (transform: -100% and margin-top: -16px)
-  // If y < rect.height + 20, we should flip to below
+
   if (y < rect.height + 30) {
     tooltipEl.style.transform = "translate(-50%, 0)";
     tooltipEl.style.marginTop = "20px";
@@ -155,7 +164,6 @@ function hideVizTooltip() {
   }
 }
 
-// Attach to window for easier debugging if needed, though not strictly required
 window.showVizTooltip = showVizTooltip;
 window.hideVizTooltip = hideVizTooltip;
 window.moveVizTooltip = moveVizTooltip;
@@ -164,9 +172,8 @@ function renderMonthlyViz(transactions) {
   const container = document.getElementById("monthly-viz");
   if (!container) return;
 
-  vizAllTransactions = transactions; // Store for income/expense calculations
+  vizAllTransactions = transactions;
 
-  // 1. Filter Expenses Only & Sort by Date Descending
   const expenses = transactions
     .filter((t) => parseFloat(t.amount) < 0)
     .sort((a, b) => new Date(b.date) - new Date(a.date));
@@ -176,31 +183,31 @@ function renderMonthlyViz(transactions) {
     return;
   }
 
-  // 2. Group by Month (YYYY-MM) + All Time
-  vizMonthsData = { "all": [] };
+  vizMonthsData = { all: [] };
   expenses.forEach((t) => {
-    const key = t.date.substring(0, 7); // "2023-10"
+    const key = t.date.substring(0, 7);
     if (!vizMonthsData[key]) vizMonthsData[key] = [];
     vizMonthsData[key].push(t);
-    vizMonthsData["all"].push(t); // Also add to all time
+    vizMonthsData["all"].push(t);
   });
 
-  // Sort keys with "all" first, then months descending
-  const monthKeys = Object.keys(vizMonthsData).filter(k => k !== "all").sort().reverse();
+  const monthKeys = Object.keys(vizMonthsData)
+    .filter((k) => k !== "all")
+    .sort()
+    .reverse();
   vizSortedMonthKeys = ["all", ...monthKeys];
-  
-  // Default Preference Logic
+
   const storedMonth = localStorage.getItem("breadwinner_month_pref");
-  let defaultIndex = 1; 
-  
+  let defaultIndex = 1;
+
   if (storedMonth) {
-     const foundIndex = vizSortedMonthKeys.indexOf(storedMonth);
-     if (foundIndex >= 0) defaultIndex = foundIndex;
+    const foundIndex = vizSortedMonthKeys.indexOf(storedMonth);
+    if (foundIndex >= 0) defaultIndex = foundIndex;
   }
-  
+
   if (defaultIndex >= vizSortedMonthKeys.length) defaultIndex = 0;
   vizCurrentMonthIndex = defaultIndex;
-  
+
   container.classList.remove("hidden");
   renderVizForMonth(vizCurrentMonthIndex);
 }
@@ -213,27 +220,24 @@ function renderVizForMonth(monthIndex) {
   const isAllTime = currentKey === "all";
   const prevKey = isAllTime ? null : vizSortedMonthKeys[monthIndex + 1];
 
-  // 3. Current Period Stats
   const currentTxs = vizMonthsData[currentKey];
-  // Safety check
   if (!currentTxs) return;
 
   const currentTotal = currentTxs.reduce((sum, t) => sum + Math.abs(parseFloat(t.amount)), 0);
 
-  // Income/Expense/Net for current period
-  let periodIncome = 0, periodExpense = 0;
-  const periodTransactions = isAllTime 
-    ? vizAllTransactions 
-    : vizAllTransactions.filter(t => t.date.startsWith(currentKey));
-  
-  periodTransactions.forEach(tx => {
+  let periodIncome = 0,
+    periodExpense = 0;
+  const periodTransactions = isAllTime
+    ? vizAllTransactions
+    : vizAllTransactions.filter((t) => t.date.startsWith(currentKey));
+
+  periodTransactions.forEach((tx) => {
     const amt = parseFloat(tx.amount);
     if (amt > 0) periodIncome += amt;
     else periodExpense += Math.abs(amt);
   });
   const periodNet = periodIncome - periodExpense;
 
-  // 4. Previous Month Stats (for comparison)
   let prevTotal = 0;
   let prevCatTotals = {};
   if (prevKey && prevKey !== "all") {
@@ -241,41 +245,40 @@ function renderVizForMonth(monthIndex) {
     if (prevTxs) {
       prevTotal = prevTxs.reduce((sum, t) => sum + Math.abs(parseFloat(t.amount)), 0);
       prevTxs.forEach((t) => {
-        prevCatTotals[t.categoryName] = (prevCatTotals[t.categoryName] || 0) + Math.abs(parseFloat(t.amount));
+        prevCatTotals[t.categoryName] =
+          (prevCatTotals[t.categoryName] || 0) + Math.abs(parseFloat(t.amount));
       });
     }
   }
 
-  // 5. Category Breakdown
   const currentCatTotals = {};
   currentTxs.forEach((t) => {
-    currentCatTotals[t.categoryName] = (currentCatTotals[t.categoryName] || 0) + Math.abs(parseFloat(t.amount));
+    currentCatTotals[t.categoryName] =
+      (currentCatTotals[t.categoryName] || 0) + Math.abs(parseFloat(t.amount));
   });
 
-  // Full Breakdown (for Legend)
   let catStats = Object.keys(currentCatTotals).map((name) => {
     const amt = currentCatTotals[name];
     const prevAmt = prevCatTotals[name] || 0;
     let deltaPct = 0;
     if (prevAmt > 0) deltaPct = ((amt - prevAmt) / prevAmt) * 100;
-    
+
     return {
       name,
       amount: amt,
       pctOfTotal: currentTotal > 0 ? (amt / currentTotal) * 100 : 0,
       delta: deltaPct,
-      prevAmount: prevAmt
+      prevAmount: prevAmt,
     };
   });
   catStats.sort((a, b) => b.amount - a.amount);
 
-  // Grouped Breakdown (for Bar) - Groups < 3% into "Other"
   const totalVal = currentTotal;
   const barStats = [];
   let otherAmt = 0;
   let otherIncluded = [];
 
-  catStats.forEach(c => {
+  catStats.forEach((c) => {
     const pct = totalVal > 0 ? (c.amount / totalVal) * 100 : 0;
     if (pct < 3 && c.name !== "Other") {
       otherAmt += c.amount;
@@ -284,9 +287,9 @@ function renderVizForMonth(monthIndex) {
       barStats.push(c);
     }
   });
-  
+
   if (otherAmt > 0) {
-    const existingOther = barStats.find(c => c.name === "Other");
+    const existingOther = barStats.find((c) => c.name === "Other");
     if (existingOther) {
       existingOther.amount += otherAmt;
       existingOther.pctOfTotal = (existingOther.amount / totalVal) * 100;
@@ -299,29 +302,34 @@ function renderVizForMonth(monthIndex) {
         pctOfTotal: (otherAmt / totalVal) * 100,
         delta: 0,
         prevAmount: 0,
-        included: otherIncluded
+        included: otherIncluded,
       });
     }
   }
   barStats.sort((a, b) => b.amount - a.amount);
 
-  // 6. Generate HTML
-  const monthDropdownOptions = vizSortedMonthKeys.map((key, idx) => {
-    let displayName;
-    if (key === "all") {
-      displayName = "All Time";
-    } else {
-      const [y, m] = key.split("-");
-      displayName = new Date(parseInt(y), parseInt(m) - 1).toLocaleString("default", { month: "long", year: "numeric" });
-    }
-    return `<option value="${idx}" ${idx === monthIndex ? 'selected' : ''}>${displayName}</option>`;
-  }).join("");
+  const monthDropdownOptions = vizSortedMonthKeys
+    .map((key, idx) => {
+      let displayName;
+      if (key === "all") {
+        displayName = "All Time";
+      } else {
+        const [y, m] = key.split("-");
+        displayName = new Date(parseInt(y), parseInt(m) - 1).toLocaleString("default", {
+          month: "long",
+          year: "numeric",
+        });
+      }
+      return `<option value="${idx}" ${idx === monthIndex ? "selected" : ""}>${displayName}</option>`;
+    })
+    .join("");
 
-  // Ticker Prev Values
-  let prevIncomeVal = 0, prevExpenseVal = 0, prevNetVal = 0;
+  let prevIncomeVal = 0,
+    prevExpenseVal = 0,
+    prevNetVal = 0;
   if (prevKey && prevKey !== "all") {
-    const prevPeriodTxs = vizAllTransactions.filter(t => t.date.startsWith(prevKey));
-    prevPeriodTxs.forEach(tx => {
+    const prevPeriodTxs = vizAllTransactions.filter((t) => t.date.startsWith(prevKey));
+    prevPeriodTxs.forEach((tx) => {
       const amt = parseFloat(tx.amount);
       if (amt > 0) prevIncomeVal += amt;
       else prevExpenseVal += Math.abs(amt);
@@ -330,39 +338,47 @@ function renderVizForMonth(monthIndex) {
   }
 
   function getTickerHtml(current, prev, invertColors = false) {
-    if (isAllTime) return ''; 
+    if (isAllTime) return "";
     if (prev === 0) {
-      if (current > 0) return `<span class="stat-card-ticker" style="color: var(--text-muted)">New</span>`;
-      return '';
+      if (current > 0)
+        return `<span class="stat-card-ticker" style="color: var(--text-muted)">New</span>`;
+      return "";
     }
     const deltaPct = ((current - prev) / prev) * 100;
-    if (Math.abs(deltaPct) < 0.1) return `<span class="stat-card-ticker" style="color: var(--text-muted)">—</span>`;
+    if (Math.abs(deltaPct) < 0.1)
+      return `<span class="stat-card-ticker" style="color: var(--text-muted)">—</span>`;
     const isUp = deltaPct > 0;
-    const upColor = invertColors ? 'var(--accent-red)' : 'var(--accent-green)';
-    const downColor = invertColors ? 'var(--accent-green)' : 'var(--accent-red)';
+    const upColor = invertColors ? "var(--accent-red)" : "var(--accent-green)";
+    const downColor = invertColors ? "var(--accent-green)" : "var(--accent-red)";
     const color = isUp ? upColor : downColor;
-    const arrow = isUp ? '▲' : '▼';
-    const fmtPct = new Intl.NumberFormat('en-US', { minimumFractionDigits: Math.abs(deltaPct) >= 1000 ? 0 : 1, maximumFractionDigits: Math.abs(deltaPct) >= 1000 ? 0 : 1 }).format(Math.abs(deltaPct));
+    const arrow = isUp ? "▲" : "▼";
+    const fmtPct = new Intl.NumberFormat("en-US", {
+      minimumFractionDigits: Math.abs(deltaPct) >= 1000 ? 0 : 1,
+      maximumFractionDigits: Math.abs(deltaPct) >= 1000 ? 0 : 1,
+    }).format(Math.abs(deltaPct));
     return `<span class="stat-card-ticker" style="color: ${color}">${arrow} ${fmtPct}%</span>`;
   }
 
-  const barsHtml = barStats.map((c) => {
-      const color = c.name === "Other" ? "#d6d3d1" : getCategoryColor(c.name); 
+  const barsHtml = barStats
+    .map((c) => {
+      const color = c.name === "Other" ? "#d6d3d1" : getCategoryColor(c.name);
       let tooltipContent = "";
       const amtStr = formatCurrency(c.amount, true);
       const pctStr = c.pctOfTotal.toFixed(1) + "%";
-      
+
       if (c.name === "Other" && c.included && c.included.length > 0) {
-        c.included.sort((a,b) => b.amount - a.amount);
-        const rows = c.included.map(sub => {
-          const subPct = totalVal > 0 ? (sub.amount / totalVal) * 100 : 0;
-          return `
+        c.included.sort((a, b) => b.amount - a.amount);
+        const rows = c.included
+          .map((sub) => {
+            const subPct = totalVal > 0 ? (sub.amount / totalVal) * 100 : 0;
+            return `
           <div class="viz-tooltip-row">
             <span>${sub.name}</span>
             <span>${subPct.toFixed(1)}%</span>
-            <!-- <span>${formatCurrency(sub.amount, true)}</span> -->
           </div>
-        `}).join("");
+        `;
+          })
+          .join("");
         tooltipContent = `
           <div class="viz-tooltip-header" style="gap: 12px;">
             <span>Other Categories</span>
@@ -385,30 +401,38 @@ function renderVizForMonth(monthIndex) {
         `;
       }
 
-      const safeTooltip = tooltipContent.replace(/"/g, '&quot;');
-      
-      return `<div class="viz-segment" 
-           style="flex: ${c.pctOfTotal} 1 0px; background: ${color}" 
+      const safeTooltip = tooltipContent.replace(/"/g, "&quot;");
+
+      return `<div class="viz-segment"
+           style="flex: ${c.pctOfTotal} 1 0px; background: ${color}"
            data-tooltip-html="${safeTooltip}"
            onclick="filterByCategoryAndScroll('${c.name.replace(/'/g, "\\'")}')"
            onmouseenter="showVizTooltip(event, this.getAttribute('data-tooltip-html'))"
            onmousemove="moveVizTooltip(event)"
            onmouseleave="hideVizTooltip()"
            ></div>`;
-    }).join("");
+    })
+    .join("");
 
-  const legendHtml = catStats.map((c) => {
+  const legendHtml = catStats
+    .map((c) => {
       const color = getCategoryColor(c.name);
       let deltaStr, deltaColor;
       if (isAllTime) {
-         deltaStr = ""; deltaColor = "transparent";
+        deltaStr = "";
+        deltaColor = "transparent";
       } else if (c.prevAmount === 0) {
-        deltaStr = "New"; deltaColor = "var(--text-muted)";
+        deltaStr = "New";
+        deltaColor = "var(--text-muted)";
       } else if (Math.abs(c.delta) < 0.1) {
-        deltaStr = "—"; deltaColor = "var(--text-muted)";
+        deltaStr = "—";
+        deltaColor = "var(--text-muted)";
       } else {
         const absDelta = Math.abs(c.delta);
-        const fmtDelta = new Intl.NumberFormat('en-US', { minimumFractionDigits: absDelta >= 1000 ? 0 : 1, maximumFractionDigits: absDelta >= 1000 ? 0 : 1 }).format(c.delta);
+        const fmtDelta = new Intl.NumberFormat("en-US", {
+          minimumFractionDigits: absDelta >= 1000 ? 0 : 1,
+          maximumFractionDigits: absDelta >= 1000 ? 0 : 1,
+        }).format(c.delta);
         deltaStr = (c.delta > 0 ? "▲ " : "▼ ") + fmtDelta + "%";
         deltaColor = c.delta > 0 ? "var(--accent-red)" : "var(--accent-green)";
       }
@@ -428,13 +452,21 @@ function renderVizForMonth(monthIndex) {
           </div>
         </div>
       `;
-    }).join("");
+    })
+    .join("");
 
   container.innerHTML = `
     <div class="viz-card">
       <div class="viz-header">
         <div class="viz-month-container">
-          <span class="viz-month-text">${isAllTime ? "All Time" : new Date(parseInt(currentKey.split("-")[0]), parseInt(currentKey.split("-")[1]) - 1).toLocaleString("default", { month: "long", year: "numeric" })}</span>
+          <span class="viz-month-text">${
+            isAllTime
+              ? "All Time"
+              : new Date(
+                  parseInt(currentKey.split("-")[0]),
+                  parseInt(currentKey.split("-")[1]) - 1
+                ).toLocaleString("default", { month: "long", year: "numeric" })
+          }</span>
           <svg class="viz-month-arrow-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
           <select id="viz-month-dropdown" class="viz-month-overlay" onchange="onVizMonthChange(this.value)">${monthDropdownOptions}</select>
         </div>
@@ -457,7 +489,9 @@ function renderVizForMonth(monthIndex) {
         <div class="stat-card">
           <span class="stat-card-label">Net</span>
           <div class="stat-card-row">
-            <span class="stat-card-value ${periodNet >= 0 ? 'positive' : 'negative'}">${periodNet >= 0 ? '+' : ''}${formatCurrency(periodNet, true)}</span>
+            <span class="stat-card-value ${periodNet >= 0 ? "positive" : "negative"}">${
+              periodNet >= 0 ? "+" : ""
+            }${formatCurrency(periodNet, true)}</span>
             ${getTickerHtml(periodNet, prevNetVal, false)}
           </div>
         </div>
@@ -471,19 +505,14 @@ function renderVizForMonth(monthIndex) {
 
 function onVizMonthChange(monthIndexStr) {
   vizCurrentMonthIndex = parseInt(monthIndexStr, 10);
-  
-  // Persist selection
   const selectedKey = vizSortedMonthKeys[vizCurrentMonthIndex];
   localStorage.setItem("breadwinner_month_pref", selectedKey);
-  
   renderVizForMonth(vizCurrentMonthIndex);
 }
 
 function renderDashboard(transactions, forceExpand = false) {
-  // Render the monthly viz (includes summary stats now)
   renderMonthlyViz(allTransactions);
 
-  // Table
   const container = document.getElementById("tx-table-container");
   const grouped = {};
 
@@ -504,42 +533,33 @@ function renderDashboard(transactions, forceExpand = false) {
     return;
   }
 
-  // Determine focused month from Viz state
   let activeMonthLabel = null;
   const currentVizKey = vizSortedMonthKeys[vizCurrentMonthIndex];
   if (currentVizKey && currentVizKey !== "all") {
     const [y, m] = currentVizKey.split("-");
-    // Ensure we match the "Month YYYY" format used by the grouper
     const d = new Date(parseInt(y), parseInt(m) - 1);
     activeMonthLabel = d.toLocaleString("default", { month: "long", year: "numeric" });
   }
 
-  // Render months with collapsible headers (default collapsed, persisted per-month)
   container.innerHTML = Object.entries(grouped)
     .map(([month, txs]) => {
       const total = txs.reduce((s, t) => s + parseFloat(t.amount), 0);
       const rows = txs.map(renderRow).join("");
-      
-      // Check localStorage for saved state, default to collapsed
-      const monthKey = month.replace(/\s+/g, '-');
+
+      const monthKey = month.replace(/\s+/g, "-");
       const savedState = localStorage.getItem(`month-${monthKey}`);
-      
-      // Expand Logic:
-      // 1. If NOT forcing expand (normal view): Use saved state.
-      // 2. If forcing expand (filter/search):
-      //    a. If we have a specific active viz month, ONLY expand that month.
-      //    b. If "All Time" is selected, expand everything.
-      let isExpanded = savedState === 'true';
-      
+
+      let isExpanded = savedState === "true";
+
       if (forceExpand) {
         if (activeMonthLabel) {
-           isExpanded = (month === activeMonthLabel);
+          isExpanded = month === activeMonthLabel;
         } else {
-           isExpanded = true;
+          isExpanded = true;
         }
       }
-      
-      const hiddenClass = isExpanded ? '' : 'hidden';
+
+      const hiddenClass = isExpanded ? "" : "hidden";
 
       return `
       <div class="month-group">
@@ -562,16 +582,18 @@ function renderDashboard(transactions, forceExpand = false) {
 
 function renderRow(tx) {
   const isNeg = tx.amount < 0;
-  const desc = tx.description.length > 60 ? tx.description.substring(0, 58) + "..." : tx.description;
+  const desc =
+    tx.description.length > 60 ? tx.description.substring(0, 58) + "..." : tx.description;
   const pillStyle = getCategoryPillStyle(tx.categoryName);
   const categoryColor = getCategoryColor(tx.categoryName);
-  // Tappable row - opens edit modal, with category color for mobile dot
   return `
     <tr onclick="openEdit(${tx.id})" style="cursor: pointer; --category-color: ${categoryColor};" tabindex="0" role="button" aria-label="Edit ${desc}">
       <td>${formatDate(tx.date)}</td>
       <td>${desc}</td>
       <td><span class="category-badge" style="${pillStyle}">${tx.categoryName}</span></td>
-      <td style="color:${isNeg ? "var(--text-main)" : "var(--accent-green)"}">${formatCurrency(Math.abs(tx.amount))}</td>
+      <td style="color:${isNeg ? "var(--text-main)" : "var(--accent-green)"}">${formatCurrency(
+        Math.abs(tx.amount)
+      )}</td>
     </tr>`;
 }
 
@@ -580,48 +602,7 @@ function toggleMonth(btn, monthKey) {
   const isHidden = content.classList.toggle("hidden");
   const isExpanded = !isHidden;
   btn.setAttribute("aria-expanded", isExpanded);
-  // Save state to localStorage
   localStorage.setItem(`month-${monthKey}`, isExpanded.toString());
-}
-
-// --- CONFIRMATION MODAL LOGIC ---
-let pendingDeleteId = null;
-
-function initiateDelete(id) {
-  pendingDeleteId = id;
-  const modal = document.getElementById("confirm-modal");
-  modal.classList.remove("hidden");
-
-  // Set up the Yes button specifically for this action
-  const yesBtn = document.getElementById("confirm-yes-btn");
-  yesBtn.onclick = () => {
-    confirmDelete();
-    closeConfirm();
-  };
-}
-
-function closeConfirm() {
-  document.getElementById("confirm-modal").classList.add("hidden");
-  pendingDeleteId = null;
-}
-
-async function confirmDelete() {
-  if (!pendingDeleteId) return;
-  const id = pendingDeleteId;
-
-  // Optimistic Delete
-  const originalTxs = [...allTransactions];
-  allTransactions = allTransactions.filter((t) => t.id !== id);
-  applyFilters();
-  showToast("Transaction deleted", "success");
-
-  const { error } = await client.from("transactions").delete().eq("id", id);
-  if (error) {
-    console.error("Delete failed", error);
-    allTransactions = originalTxs;
-    applyFilters();
-    showToast("Failed to delete", "error");
-  }
 }
 
 // --- MODAL LOGIC ---
@@ -638,8 +619,12 @@ document.getElementById("confirm-modal").addEventListener("click", (e) => {
 
 function setTxType(type) {
   currentTxType = type;
-  document.getElementById("type-expense").className = `type-btn ${type === "expense" ? "active" : ""}`;
-  document.getElementById("type-income").className = `type-btn ${type === "income" ? "active" : ""}`;
+  document.getElementById("type-expense").className = `type-btn ${
+    type === "expense" ? "active" : ""
+  }`;
+  document.getElementById("type-income").className = `type-btn ${
+    type === "income" ? "active" : ""
+  }`;
 }
 
 function openAddModal() {
@@ -650,16 +635,12 @@ function openAddModal() {
   document.getElementById("edit-date").value = new Date().toISOString().split("T")[0];
   setTxType("expense");
   renderCats();
-  // Hide delete button for new transactions
   document.getElementById("delete-tx-btn").classList.add("hidden");
   document.getElementById("edit-modal").classList.remove("hidden");
   document.getElementById("edit-amount").focus();
 }
 
-function openEdit(id, event) {
-  // Prevent row click bubbling if clicking specific elements
-  if (event) event.stopPropagation();
-  
+function openEdit(id) {
   const tx = allTransactions.find((t) => t.id == id);
   if (!tx) return;
   currentEditId = id;
@@ -670,7 +651,6 @@ function openEdit(id, event) {
   setTxType(rawAmt >= 0 ? "income" : "expense");
   document.getElementById("edit-date").value = tx.date;
   renderCats(tx.category_id);
-  // Show delete button for existing transactions
   document.getElementById("delete-tx-btn").classList.remove("hidden");
   document.getElementById("edit-modal").classList.remove("hidden");
 }
@@ -693,22 +673,41 @@ function closeAboutModal() {
   document.getElementById("about-modal").classList.add("hidden");
 }
 
-// Delete directly from modal without confirmation
-async function deleteFromModal() {
+// --- CONFIRMATION MODAL LOGIC ---
+let pendingDeleteId = null;
+
+function closeConfirm() {
+  document.getElementById("confirm-modal").classList.add("hidden");
+  pendingDeleteId = null;
+}
+
+function deleteFromModal() {
   if (!currentEditId) return;
-  const id = currentEditId;
-  
+  pendingDeleteId = currentEditId;
   closeModal();
-  
-  // Optimistic Delete
+
+  const modal = document.getElementById("confirm-modal");
+  modal.classList.remove("hidden");
+
+  document.getElementById("confirm-yes-btn").onclick = () => {
+    confirmDelete();
+    closeConfirm();
+  };
+}
+
+async function confirmDelete() {
+  if (!pendingDeleteId) return;
+  const id = pendingDeleteId;
+
   const originalTxs = [...allTransactions];
   allTransactions = allTransactions.filter((t) => t.id !== id);
   applyFilters();
   showToast("Transaction deleted", "success");
 
-  const { error } = await client.from("transactions").delete().eq("id", id);
-  if (error) {
-    console.error("Delete failed", error);
+  try {
+    await apiFetch(`/api/transaction/${id}`, { method: "DELETE" });
+  } catch (e) {
+    console.error("Delete failed", e);
     allTransactions = originalTxs;
     applyFilters();
     showToast("Failed to delete", "error");
@@ -720,9 +719,6 @@ async function saveEdit() {
   const rawAmt = parseFloat(document.getElementById("edit-amount").value);
   const date = document.getElementById("edit-date").value;
   const cat = document.getElementById("edit-category").value;
-  const {
-    data: { session },
-  } = await client.auth.getSession();
 
   if (!rawAmt) {
     showToast("Please enter an amount", "error");
@@ -730,26 +726,30 @@ async function saveEdit() {
   }
 
   const finalAmt = currentTxType === "expense" ? -Math.abs(rawAmt) : Math.abs(rawAmt);
-  const payload = { description: desc, amount: finalAmt, date: date, category_id: cat };
+  const payload = { description: desc, amount: finalAmt, date: date, category_id: parseInt(cat) };
 
   closeModal();
   showToast("Saving...", "loading");
 
-  let error;
-  if (currentEditId) {
-    const res = await client.from("transactions").update(payload).eq("id", currentEditId);
-    error = res.error;
-  } else {
-    const res = await client.from("transactions").insert({ ...payload, user_id: session.user.id });
-    error = res.error;
-  }
-
-  if (error) {
-    console.error(error);
-    showToast("Error saving", "error");
-  } else {
+  try {
+    if (currentEditId) {
+      await apiFetch(`/api/transaction/${currentEditId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+    } else {
+      await apiFetch("/api/transactions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+    }
     await fetchTransactions();
     showToast("Saved successfully", "success");
+  } catch (e) {
+    console.error(e);
+    showToast("Error saving", "error");
   }
 }
 
@@ -765,7 +765,7 @@ async function extractTextFromPDF(file) {
       txt += c.items.map((s) => s.str).join(" ") + "\n";
     }
     return txt;
-  } catch (e) {
+  } catch {
     return null;
   }
 }
@@ -780,9 +780,7 @@ if (trigger && input) {
     if (!f) return;
     showToast("Reading PDF...", "loading");
 
-    const {
-      data: { session },
-    } = await client.auth.getSession();
+    const token = await getAuthToken();
     const txt = await extractTextFromPDF(f);
 
     const fd = new FormData();
@@ -795,7 +793,7 @@ if (trigger && input) {
     try {
       const res = await fetch("/api/upload", {
         method: "POST",
-        headers: { Authorization: `Bearer ${session.access_token}` },
+        headers: { Authorization: `Bearer ${token}` },
         body: fd,
       });
       if (!res.ok) throw new Error(await res.text());
@@ -809,99 +807,70 @@ if (trigger && input) {
   };
 }
 
-// --- AUTH LOGIC ---
-function handleLoginEnter(e) {
-  if (e.key === "Enter") document.getElementById("login-btn").click();
-}
-document.getElementById("email")?.addEventListener("keypress", handleLoginEnter);
-document.getElementById("password")?.addEventListener("keypress", handleLoginEnter);
-
-document.getElementById("login-btn").onclick = async () => {
-  const e = document.getElementById("email").value;
-  const p = document.getElementById("password").value;
-  toggleLoading(true);
-  const { error } = await client.auth.signInWithPassword({ email: e, password: p });
-  if (error) {
-    document.getElementById("msg").innerText = error.message;
-    toggleLoading(false);
-  } else {
-    checkUser();
-  }
-};
-
-document.getElementById("signup-btn").onclick = async () => {
-  const e = document.getElementById("email").value;
-  const p = document.getElementById("password").value;
-  toggleLoading(true);
-  const { error } = await client.auth.signUp({ email: e, password: p });
-  toggleLoading(false);
-  if (error) document.getElementById("msg").innerText = error.message;
-  else alert("Check your email for the confirmation link.");
-};
-
-document.getElementById("logout-btn").onclick = async () => {
-  toggleLoading(true);
-  await client.auth.signOut();
-  updateUI(null);
-  toggleLoading(false);
-};
-
 // --- AI INSIGHTS ---
 async function fetchInsights(forceRefresh = false) {
   const container = document.getElementById("ai-insights");
   const textEl = document.getElementById("insights-text");
   const refreshBtn = document.getElementById("refresh-insights-btn");
-  
+
   if (!container || !textEl) return;
-  
+
   container.classList.remove("hidden");
   textEl.innerText = "Loading insights...";
   textEl.classList.add("loading");
   if (refreshBtn) refreshBtn.disabled = true;
-  
+
   try {
-    const { data: { session } } = await client.auth.getSession();
-    if (!session) return;
-    
     const url = forceRefresh ? "/api/insights?refresh=true" : "/api/insights";
-    const res = await fetch(url, {
-      headers: { Authorization: `Bearer ${session.access_token}` },
-    });
-    
-    const data = await res.json();
+    const data = await apiFetch(url);
+
     textEl.innerText = data.insight;
     textEl.classList.remove("loading");
-    
+
     if (data.error) {
       textEl.classList.add("error");
     } else {
       textEl.classList.remove("error");
     }
-  } catch (e) {
+  } catch {
     textEl.innerText = "Unable to load insights right now.";
     textEl.classList.remove("loading");
     textEl.classList.add("error");
   }
-  
+
   if (refreshBtn) refreshBtn.disabled = false;
 }
 
-// Bind refresh button
 document.getElementById("refresh-insights-btn")?.addEventListener("click", () => {
   fetchInsights(true);
 });
 
+// --- AUTH ---
 async function checkUser() {
   toggleLoading(true);
   try {
-    const {
-      data: { session },
-    } = await client.auth.getSession();
-    updateUI(session);
-    if (session) {
-      await fetchTransactions();
-      fetchInsights(); // Non-blocking, load in background
+    await clerk.load();
+
+    if (!clerk.user) {
+      const urlParams = new URLSearchParams(window.location.search);
+      if (!urlParams.has("login")) {
+        window.location.href = "/landing.html";
+        return;
+      }
+      document.getElementById("auth-section").classList.remove("hidden");
+      document.getElementById("app-section").classList.add("hidden");
+      clerk.mountSignIn(document.getElementById("clerk-sign-in"));
+      toggleLoading(false);
+      return;
     }
+
+    clerk.addListener(({ user }) => {
+      if (!user) window.location.href = "/landing.html";
+    });
+
+    updateUI(clerk.user);
+    await fetchTransactions();
+    fetchInsights();
   } catch (err) {
     console.error("Initialization error:", err);
     showToast("Failed to load application", "error");
@@ -910,25 +879,15 @@ async function checkUser() {
   }
 }
 
-function updateUI(s) {
-  if (s) {
+function updateUI(user) {
+  if (user) {
     document.getElementById("auth-section").classList.add("hidden");
     document.getElementById("app-section").classList.remove("hidden");
-    document.getElementById("user-email").innerText = s.user.email;
-  } else {
-    // Redirect unauthenticated users to landing page
-    // Unless they're explicitly trying to log in (check URL param)
-    const urlParams = new URLSearchParams(window.location.search);
-    if (!urlParams.has('login')) {
-      window.location.href = '/landing.html';
-      return;
-    }
-    document.getElementById("auth-section").classList.remove("hidden");
-    document.getElementById("app-section").classList.add("hidden");
+    const email = user.emailAddresses?.[0]?.emailAddress || "";
+    document.getElementById("user-email").innerText = email;
   }
 }
 
-// Init
 checkUser();
 
 // --- USER DROPDOWN ---
@@ -937,7 +896,6 @@ function toggleUserDropdown() {
   menu.classList.toggle("hidden");
 }
 
-// Close dropdown when clicking outside
 document.addEventListener("click", (e) => {
   const dropdown = document.querySelector(".user-dropdown");
   const menu = document.getElementById("user-dropdown-menu");
@@ -946,11 +904,16 @@ document.addEventListener("click", (e) => {
   }
 });
 
-// Close modal and dropdown on Escape key
-document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape') {
+document.getElementById("logout-btn").onclick = async () => {
+  toggleLoading(true);
+  await clerk.signOut();
+  window.location.href = "/landing.html";
+};
+
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") {
     closeModal();
-    if (typeof closeConfirm === 'function') closeConfirm(false);
+    closeConfirm();
     const menu = document.getElementById("user-dropdown-menu");
     if (menu) menu.classList.add("hidden");
   }
