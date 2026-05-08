@@ -1,108 +1,72 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import { createClient } from "@supabase/supabase-js";
 
 interface Env {
+  DB: D1Database;
   GEMINI_API_KEY: string;
-  SUPABASE_URL: string;
-  SUPABASE_KEY: string;
 }
 
-interface CategoryTotal {
-  name: string;
-  total: number;
-}
-
-export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
+export const onRequestGet: PagesFunction<Env> = async ({ request, env, data }) => {
   try {
-    const authHeader = request.headers.get("Authorization");
-    if (!authHeader) return new Response("Missing Auth Header", { status: 401 });
+    const userId = (data as any).userId;
+    const url = new URL(request.url);
+    const forceRefresh = url.searchParams.get("refresh") === "true";
 
-    const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_KEY, {
-      global: { headers: { Authorization: authHeader } },
-    });
+    const profile = await env.DB.prepare(
+      "SELECT gemini_api_key, insights_cache, insights_updated_at FROM profiles WHERE user_id = ?"
+    ).bind(userId).first<{ gemini_api_key: string | null; insights_cache: string | null; insights_updated_at: string | null }>();
 
-    // 1. Get User
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-    if (authError || !user) return new Response("Invalid User", { status: 401 });
+    const txCount = await env.DB.prepare(
+      "SELECT COUNT(*) as count FROM transactions WHERE user_id = ?"
+    ).bind(userId).first<{ count: number }>();
 
-    // 2. Fetch User Profile for API Key and cached insights
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("gemini_api_key, insights_cache, insights_updated_at")
-      .eq("id", user.id)
-      .single();
-
-    // 3. Early exit if no transactions (fixes issue where cache persists after delete)
-    const { count, error: countError } = await supabase
-      .from("transactions")
-      .select("*", { count: "exact", head: true });
-
-    if (count === 0) {
-      // Clear cache if it exists so we don't hit this check repeatedly if we were to rely on cache later
-      // Although we are returning early, so cache doesn't matter for this response. 
-      // But good practice to ensure state is clean.
+    if (!txCount || txCount.count === 0) {
       if (profile?.insights_cache) {
-         await supabase.from("profiles").update({ insights_cache: null, insights_updated_at: null }).eq("id", user.id);
+        await env.DB.prepare(
+          "UPDATE profiles SET insights_cache = NULL, insights_updated_at = NULL WHERE user_id = ?"
+        ).bind(userId).run();
       }
-      
-      return new Response(JSON.stringify({ 
+      return Response.json({
         insight: "Add some transactions to get personalized spending insights!",
-        cached: false 
-      }), {
-        headers: { "Content-Type": "application/json" },
+        cached: false,
       });
     }
 
-    // 4. Check if we have a recent cached insight (less than 24 hours old)
-    if (profile?.insights_cache && profile?.insights_updated_at) {
+    if (!forceRefresh && profile?.insights_cache && profile?.insights_updated_at) {
       const updatedAt = new Date(profile.insights_updated_at);
-      const now = new Date();
-      const hoursSinceUpdate = (now.getTime() - updatedAt.getTime()) / (1000 * 60 * 60);
-      
+      const hoursSinceUpdate = (Date.now() - updatedAt.getTime()) / (1000 * 60 * 60);
       if (hoursSinceUpdate < 24) {
-        return new Response(JSON.stringify({ 
-          insight: profile.insights_cache,
-          cached: true 
-        }), {
-          headers: { "Content-Type": "application/json" },
-        });
+        return Response.json({ insight: profile.insights_cache, cached: true });
       }
     }
 
-    // 5. Fetch transactions to generate new insight
-    const { data: transactions, error: txError } = await supabase
-      .from("transactions")
-      .select(`amount, date, categories ( name )`)
-      .order("date", { ascending: false })
-      .limit(200); // Last 200 transactions for context
+    const { results: transactions } = await env.DB.prepare(`
+      SELECT t.amount, t.date, c.name as category_name
+      FROM transactions t
+      LEFT JOIN categories c ON t.category_id = c.id
+      WHERE t.user_id = ?
+      ORDER BY t.date DESC
+      LIMIT 200
+    `).bind(userId).all();
 
-    if (txError || !transactions || transactions.length === 0) {
-      // Should be caught by count check, but safe fallback
-      return new Response(JSON.stringify({ 
+    if (!transactions?.length) {
+      return Response.json({
         insight: "Add some transactions to get personalized spending insights!",
-        cached: false 
-      }), {
-        headers: { "Content-Type": "application/json" },
+        cached: false,
       });
     }
 
-    // 5. Aggregate data to minimize token usage
     let totalIncome = 0;
     let totalExpenses = 0;
     const categoryTotals: Record<string, number> = {};
+    const catCounts: Record<string, number> = {};
     const monthlyTotals: Record<string, { income: number; expenses: number }> = {};
 
     transactions.forEach((tx: any) => {
       const amt = parseFloat(tx.amount);
-      const monthKey = tx.date.substring(0, 7); // YYYY-MM
-      const catName = tx.categories?.name || "Other";
+      const monthKey = tx.date.substring(0, 7);
+      const catName = tx.category_name || "Other";
 
-      if (!monthlyTotals[monthKey]) {
-        monthlyTotals[monthKey] = { income: 0, expenses: 0 };
-      }
+      if (!monthlyTotals[monthKey]) monthlyTotals[monthKey] = { income: 0, expenses: 0 };
 
       if (amt > 0) {
         totalIncome += amt;
@@ -112,60 +76,32 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
         monthlyTotals[monthKey].expenses += Math.abs(amt);
         categoryTotals[catName] = (categoryTotals[catName] || 0) + Math.abs(amt);
       }
+      catCounts[catName] = (catCounts[catName] || 0) + 1;
     });
 
-    // Sort categories by spending
-    const topCategories = Object.entries(categoryTotals)
+    const detailedCategories = Object.entries(categoryTotals)
       .sort((a, b) => b[1] - a[1])
       .slice(0, 5)
-      .map(([name, total]) => `${name}: $${total.toFixed(0)}`);
+      .map(([name, total]) => `${name}: $${total.toFixed(0)} (${catCounts[name] || 0} txs)`)
+      .join(", ");
 
-    // Prepare compact prompt
-    const summaryData = {
-      totalIncome: totalIncome.toFixed(0),
-      totalExpenses: totalExpenses.toFixed(0),
-      netSavings: (totalIncome - totalExpenses).toFixed(0),
-      topCategories: topCategories.join(", "),
-      monthCount: Object.keys(monthlyTotals).length,
-    };
+    let largestAmt = 0;
+    let largestCat = "None";
+    transactions.forEach((tx: any) => {
+      const abs = Math.abs(parseFloat(tx.amount));
+      if (abs > largestAmt) {
+        largestAmt = abs;
+        largestCat = tx.category_name || "Other";
+      }
+    });
 
-    // 6. Determine which API key to use
     const activeApiKey = profile?.gemini_api_key || env.GEMINI_API_KEY;
-
     if (!activeApiKey) {
       return new Response("No AI API Key configured", { status: 500 });
     }
 
-    // 7. Generate insight with Gemini
     const genAI = new GoogleGenerativeAI(activeApiKey);
     const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
-
-
-
-    // Calculate additional metrics for behavioral insights
-    const txCount = transactions.length;
-    
-    // Find largest single transaction
-    const largestTx = transactions.reduce((max: any, t: any) => 
-      Math.abs(parseFloat(t.amount)) > Math.abs(parseFloat(max.amount || 0)) ? t : max
-    , { amount: 0, categories: { name: 'None' } });
-
-    // Calculate specific category transaction counts (for "impulse" vs "bulk" inference)
-    const catCounts: Record<string, number> = {};
-    transactions.forEach((tx: any) => {
-       const name = tx.categories?.name || "Other";
-       catCounts[name] = (catCounts[name] || 0) + 1;
-    });
-    
-    // Format top categories with count for context: "Dining ($500, 12 txs)"
-    const detailedCategories = Object.entries(categoryTotals)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 5)
-      .map(([name, total]) => {
-        const count = catCounts[name] || 0;
-        return `${name}: $${total.toFixed(0)} (${count} txs)`;
-      })
-      .join(", ");
 
     const prompt = `Role: Financial Data Analyst.
 Task: Synthesize the provided transaction data into behavioral insights.
@@ -173,56 +109,42 @@ Task: Synthesize the provided transaction data into behavioral insights.
 Guidelines:
 - Ignore the Obvious: Do not simply list the largest categories unless they show an unusual spike or deviation.
 - Identify Anomalies: Focus on unusual transaction frequencies, large single purchases, or spending concentration.
-- Infer Patterns: Connect the data to logical lifestyle assumptions (e.g., "impulse buying," "bulk shopping," "lifestyle creep," "subscription fatigue").
+- Infer Patterns: Connect the data to logical lifestyle assumptions.
 - Format: 3-5 sentences. No advice or tips. Max 100 words. Be specific with numbers.
 
 Context Data:
-- Total Spending: $${summaryData.totalExpenses} over ${summaryData.monthCount} months
+- Total Spending: $${totalExpenses.toFixed(0)} over ${Object.keys(monthlyTotals).length} months
 - Breakdown: ${detailedCategories}
-- Largest Single Purchase: ${largestTx.categories?.name} ($${Math.abs(parseFloat(largestTx.amount)).toFixed(0)})
-- Transaction Volume: ${txCount} recorded transactions
+- Largest Single Purchase: ${largestCat} ($${largestAmt.toFixed(0)})
+- Transaction Volume: ${transactions.length} recorded transactions
 `;
 
     let result;
     try {
       result = await model.generateContent(prompt);
     } catch (aiError: any) {
-      // Handle rate limiting
       if (aiError.status === 429 || aiError.message?.includes("429")) {
-        return new Response(JSON.stringify({ 
-          insight: "AI rate limit reached. Please try again in a few minutes.",
-          error: true 
-        }), {
-          status: 429,
-          headers: { "Content-Type": "application/json" },
-        });
+        return Response.json(
+          { insight: "AI rate limit reached. Please try again in a few minutes.", error: true },
+          { status: 429 }
+        );
       }
       throw aiError;
     }
 
     const insight = result.response.text().trim();
 
-    // 8. Cache the insight
-    await supabase
-      .from("profiles")
-      .update({ 
-        insights_cache: insight, 
-        insights_updated_at: new Date().toISOString() 
-      })
-      .eq("id", user.id);
+    await env.DB.prepare(
+      `INSERT INTO profiles (user_id, insights_cache, insights_updated_at) VALUES (?, ?, ?)
+       ON CONFLICT(user_id) DO UPDATE SET insights_cache = ?, insights_updated_at = ?`
+    ).bind(userId, insight, new Date().toISOString(), insight, new Date().toISOString()).run();
 
-    return new Response(JSON.stringify({ insight, cached: false }), {
-      headers: { "Content-Type": "application/json" },
-    });
-
+    return Response.json({ insight, cached: false });
   } catch (err: any) {
     console.error("Insights error:", err);
-    return new Response(JSON.stringify({ 
-      insight: "Unable to generate insights right now. Please try again later.",
-      error: true 
-    }), {
-      status: 500,
-      headers: { "Content-Type": "application/json" },
-    });
+    return Response.json(
+      { insight: "Unable to generate insights right now. Please try again later.", error: true },
+      { status: 500 }
+    );
   }
 };
