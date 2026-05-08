@@ -5,4 +5,4 @@ pages_build_output_dir = "public"
 [[d1_databases]]
 binding = "DB"
 database_name = "breadwinner"
-database_id = "YOUR_DATABASE_ID"
+database_id = "d5557b56-9584-4c69-a065-6a35127ec510"
