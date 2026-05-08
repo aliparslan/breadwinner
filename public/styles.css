@@ -184,6 +184,12 @@ input, select {
 .error-msg {
   color: var(--accent-red); margin-top: 12px; font-size: 0.9rem;
 }
+.error-msg[data-state="success"] {
+  color: var(--accent-green);
+}
+.error-msg[data-state="error"] {
+  color: var(--accent-red);
+}
 
 
 input:focus, select:focus {
