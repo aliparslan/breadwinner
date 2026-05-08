@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>Settings | Breadwinner</title>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@5/dist/clerk.browser.js"></script>
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
@@ -23,35 +23,26 @@
         <div class="user-controls">
            <!-- Using same ID as index for consistency if we want to show email -->
            <span id="profile-email-display" class="desktop-only" style="color: var(--text-secondary); font-size: 0.85rem; font-weight: 600;"></span>
-           <button class="secondary logout-btn" onclick="client.auth.signOut().then(() => window.location.href = '/')">Log Out</button>
+           <button class="secondary logout-btn" id="logout-btn">Log Out</button>
         </div>
       </div>
 
       <div class="section-header">
-        <h3>Account</h3>
-      </div>
-      <!-- ACCOUNT SETTINGS -->
-      <div class="settings-group">
-        <label class="input-label" for="profile-email">Email</label>
-        <input type="text" id="profile-email" placeholder="your@email.com" />
+  <h3>Account</h3>
+</div>
+<div class="settings-group">
+  <div style="display: flex; justify-content: space-between; align-items: center;">
+    <div>
+      <p id="profile-email-display" style="font-weight: 600; margin: 0;"></p>
+      <p style="font-size: 0.85rem; color: var(--text-secondary); margin: 4px 0 0 0;">
+        Manage your email, password, and security via Clerk.
+      </p>
+    </div>
+    <button class="secondary" id="manage-account-btn">Manage Account</button>
+  </div>
+</div>
 
-        <div style="display: flex; gap: 12px; margin-top: 12px;">
-            <div style="flex: 1;">
-                 <label class="input-label" for="current-password">Current Password</label>
-                 <input type="password" id="current-password" placeholder="Required to save changes" />
-            </div>
-            <div style="flex: 1;">
-                 <label class="input-label" for="profile-password">New Password</label>
-                 <input type="password" id="profile-password" placeholder="Optional" />
-            </div>
-        </div>
-
-        <div style="margin-top: 15px; display: flex; justify-content: flex-end">
-          <button class="primary-btn" onclick="updateProfile()">Update Profile</button>
-        </div>
-      </div>
-
-      <div class="settings-divider"></div>
+<div class="settings-divider"></div>
 
       <!-- AI CONFIG --->
       <div class="section-header">
