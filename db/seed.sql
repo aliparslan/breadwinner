@@ -1,4 +1,4 @@
-INSERT INTO categories (name) VALUES
+INSERT OR IGNORE INTO categories (name) VALUES
   ('Dining'),
   ('Entertainment'),
   ('Gifts'),
