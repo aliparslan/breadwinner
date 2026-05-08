@@ -26,10 +26,17 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env, data }) 
     category_id: number;
   };
 
+  if (typeof body.amount !== "number" || !body.date || !body.category_id) {
+    return new Response(JSON.stringify({ error: "Missing required fields: amount, date, category_id" }), {
+      status: 400,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+
   const result = await env.DB.prepare(`
     INSERT INTO transactions (user_id, category_id, date, description, amount)
     VALUES (?, ?, ?, ?, ?)
-  `).bind(userId, body.category_id, body.date, body.description, body.amount).run();
+  `).bind(userId, body.category_id, body.date, body.description || "", body.amount).run();
 
   return Response.json({ id: result.meta.last_row_id, ...body, user_id: userId });
 };
