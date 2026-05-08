@@ -12,6 +12,13 @@ export const onRequestPut: PagesFunction<Env> = async ({ request, env, data, par
     category_id: number;
   };
 
+  if (typeof body.amount !== "number" || !body.date || !body.category_id) {
+    return new Response(JSON.stringify({ error: "Missing required fields: amount, date, category_id" }), {
+      status: 400,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+
   const result = await env.DB.prepare(`
     UPDATE transactions
     SET description = ?, amount = ?, date = ?, category_id = ?

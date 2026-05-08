@@ -28,6 +28,8 @@ async function init() {
   const email = clerk.user.emailAddresses?.[0]?.emailAddress || "";
   const emailDisplay = document.getElementById("profile-email-display");
   if (emailDisplay) emailDisplay.innerText = email;
+  const emailAccount = document.getElementById("profile-email-account");
+  if (emailAccount) emailAccount.innerText = email;
 
   try {
     const profile = await apiFetch("/api/profile");
@@ -115,12 +117,7 @@ async function confirmReset() {
   showToast("Starting fresh...", "loading");
 
   try {
-    const token = await getAuthToken();
-
-    await fetch("/api/transactions", {
-      method: "DELETE",
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    await apiFetch("/api/transactions", { method: "DELETE" });
 
     await apiFetch("/api/profile", {
       method: "PUT",
