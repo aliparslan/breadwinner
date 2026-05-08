@@ -932,12 +932,17 @@ document.getElementById("signup-btn").onclick = async () => {
 
 document.getElementById("forgot-password-btn").onclick = async (event) => {
   event.preventDefault();
-  const email = document.getElementById("email").value.trim();
+  const emailInput = document.getElementById("email");
+  const email = emailInput.value.trim();
   if (!email) {
     setAuthMessage("Enter your email first, then we can send a reset link.", "error");
+    setAuthHelp("Start with the same email you use to sign in, then try the reset link again.");
+    emailInput.focus();
     return;
   }
 
+  setAuthMessage("Sending reset email...", "success");
+  setAuthHelp("We’ll email you a secure link to choose a new password.");
   toggleLoading(true);
   const { error } = await client.auth.resetPasswordForEmail(email, {
     redirectTo: `${window.location.origin}/?reset=1`,
