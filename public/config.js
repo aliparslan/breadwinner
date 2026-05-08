@@ -1,5 +1,3 @@
-const CLERK_PUBLISHABLE_KEY = "pk_test_aHVtb3JvdXMtcGVhY29jay00NS5jbGVyay5hY2NvdW50cy5kZXYk";
-
 const CATEGORY_COLORS = {
   "Housing": "#5c4033",
   "Groceries": "#228b22",

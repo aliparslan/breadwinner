@@ -7,7 +7,7 @@ interface Env {
   GEMINI_API_KEY: string;
 }
 
-const PUBLIC_ROUTES = ["/api/validate-key"];
+const PUBLIC_ROUTES = ["/api/public-config", "/api/validate-key"];
 
 export const onRequest: PagesFunction<Env> = async (context) => {
   const url = new URL(context.request.url);

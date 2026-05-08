@@ -1,10 +1,37 @@
 let allCategories = [];
 let allTransactions = [];
 
-const clerk = new window.Clerk(CLERK_PUBLISHABLE_KEY);
+let clerk = null;
+let clerkReadyPromise = null;
+
+async function getClerk() {
+  if (!clerkReadyPromise) {
+    clerkReadyPromise = (async () => {
+      const res = await fetch("/api/public-config");
+      if (!res.ok) {
+        throw new Error(`Failed to load auth config: ${await res.text()}`);
+      }
+
+      const { clerkPublishableKey } = await res.json();
+      if (!clerkPublishableKey) {
+        throw new Error("Missing Clerk publishable key");
+      }
+
+      clerk = new window.Clerk(clerkPublishableKey);
+      await clerk.load();
+      return clerk;
+    })();
+  }
+
+  return clerkReadyPromise;
+}
 
 async function getAuthToken() {
-  return await clerk.session.getToken();
+  const activeClerk = await getClerk();
+  if (!activeClerk.session) {
+    throw new Error("No active session");
+  }
+  return await activeClerk.session.getToken();
 }
 
 async function apiFetch(url, options = {}) {
@@ -849,9 +876,9 @@ document.getElementById("refresh-insights-btn")?.addEventListener("click", () =>
 async function checkUser() {
   toggleLoading(true);
   try {
-    await clerk.load();
+    const activeClerk = await getClerk();
 
-    if (!clerk.user) {
+    if (!activeClerk.user) {
       const urlParams = new URLSearchParams(window.location.search);
       if (!urlParams.has("login")) {
         window.location.href = "/landing.html";
@@ -859,21 +886,27 @@ async function checkUser() {
       }
       document.getElementById("auth-section").classList.remove("hidden");
       document.getElementById("app-section").classList.add("hidden");
-      clerk.mountSignIn(document.getElementById("clerk-sign-in"));
+      activeClerk.mountSignIn(document.getElementById("clerk-sign-in"));
       toggleLoading(false);
       return;
     }
 
-    clerk.addListener(({ user }) => {
+    activeClerk.addListener(({ user }) => {
       if (!user) window.location.href = "/landing.html";
     });
 
-    updateUI(clerk.user);
+    updateUI(activeClerk.user);
     await fetchTransactions();
     fetchInsights();
   } catch (err) {
     console.error("Initialization error:", err);
     showToast("Failed to load application", "error");
+    const authSection = document.getElementById("auth-section");
+    const appSection = document.getElementById("app-section");
+    if (authSection && appSection) {
+      authSection.classList.remove("hidden");
+      appSection.classList.add("hidden");
+    }
   } finally {
     toggleLoading(false);
   }
@@ -906,7 +939,8 @@ document.addEventListener("click", (e) => {
 
 document.getElementById("logout-btn").onclick = async () => {
   toggleLoading(true);
-  await clerk.signOut();
+  const activeClerk = await getClerk();
+  await activeClerk.signOut();
   window.location.href = "/landing.html";
 };
 

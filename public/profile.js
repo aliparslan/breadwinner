@@ -1,7 +1,34 @@
-const clerk = new window.Clerk(CLERK_PUBLISHABLE_KEY);
+let clerk = null;
+let clerkReadyPromise = null;
+
+async function getClerk() {
+  if (!clerkReadyPromise) {
+    clerkReadyPromise = (async () => {
+      const res = await fetch("/api/public-config");
+      if (!res.ok) {
+        throw new Error(`Failed to load auth config: ${await res.text()}`);
+      }
+
+      const { clerkPublishableKey } = await res.json();
+      if (!clerkPublishableKey) {
+        throw new Error("Missing Clerk publishable key");
+      }
+
+      clerk = new window.Clerk(clerkPublishableKey);
+      await clerk.load();
+      return clerk;
+    })();
+  }
+
+  return clerkReadyPromise;
+}
 
 async function getAuthToken() {
-  return await clerk.session.getToken();
+  const activeClerk = await getClerk();
+  if (!activeClerk.session) {
+    throw new Error("No active session");
+  }
+  return await activeClerk.session.getToken();
 }
 
 async function apiFetch(url, options = {}) {
@@ -17,40 +44,44 @@ async function apiFetch(url, options = {}) {
 
 async function init() {
   toggleLoading(true);
-
-  await clerk.load();
-
-  if (!clerk.user) {
-    window.location.href = "/?login";
-    return;
-  }
-
-  const email = clerk.user.emailAddresses?.[0]?.emailAddress || "";
-  const emailDisplay = document.getElementById("profile-email-display");
-  if (emailDisplay) emailDisplay.innerText = email;
-  const emailAccount = document.getElementById("profile-email-account");
-  if (emailAccount) emailAccount.innerText = email;
-
   try {
-    const profile = await apiFetch("/api/profile");
-    if (profile.gemini_api_key) {
-      document.getElementById("api-key").value = profile.gemini_api_key;
+    const activeClerk = await getClerk();
+
+    if (!activeClerk.user) {
+      window.location.href = "/?login";
+      return;
     }
+
+    const email = activeClerk.user.emailAddresses?.[0]?.emailAddress || "";
+    const emailDisplay = document.getElementById("profile-email-display");
+    if (emailDisplay) emailDisplay.innerText = email;
+    const emailAccount = document.getElementById("profile-email-account");
+    if (emailAccount) emailAccount.innerText = email;
+
+    try {
+      const profile = await apiFetch("/api/profile");
+      if (profile.gemini_api_key) {
+        document.getElementById("api-key").value = profile.gemini_api_key;
+      }
+    } catch (e) {
+      console.error("Failed to load profile:", e);
+    }
+
+    document.getElementById("manage-account-btn").onclick = () => {
+      activeClerk.openUserProfile();
+    };
+
+    document.getElementById("logout-btn").onclick = async () => {
+      toggleLoading(true);
+      await activeClerk.signOut();
+      window.location.href = "/";
+    };
   } catch (e) {
-    console.error("Failed to load profile:", e);
+    console.error("Profile initialization error:", e);
+    showToast("Failed to load settings", "error");
+  } finally {
+    toggleLoading(false);
   }
-
-  document.getElementById("manage-account-btn").onclick = () => {
-    clerk.openUserProfile();
-  };
-
-  document.getElementById("logout-btn").onclick = async () => {
-    toggleLoading(true);
-    await clerk.signOut();
-    window.location.href = "/";
-  };
-
-  toggleLoading(false);
 }
 
 async function saveKey() {
@@ -142,7 +173,8 @@ async function confirmDeleteAccount() {
     await apiFetch("/api/delete-account", { method: "POST" });
 
     showToast("Account deleted successfully", "success");
-    await clerk.signOut();
+    const activeClerk = await getClerk();
+    await activeClerk.signOut();
     setTimeout(() => {
       window.location.href = "/landing.html";
     }, 1000);
