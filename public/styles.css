@@ -150,6 +150,16 @@ input, select {
   color: var(--primary-hover);
   background: transparent;
 }
+.text-link {
+  color: var(--primary);
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.text-link:hover {
+  color: var(--primary-hover);
+}
 .auth-help {
   margin-top: 12px;
   padding: 12px 14px;

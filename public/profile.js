@@ -156,7 +156,7 @@ async function confirmDeleteAccount() {
     }, 1000);
   } catch (e) {
     console.error("Delete account error:", e);
-    showToast("Failed to delete account", "error");
+    showToast(e.message || "Failed to delete account", "error");
   }
 }
 

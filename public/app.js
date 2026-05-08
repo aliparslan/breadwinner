@@ -930,7 +930,8 @@ document.getElementById("signup-btn").onclick = async () => {
   }
 };
 
-document.getElementById("forgot-password-btn").onclick = async () => {
+document.getElementById("forgot-password-btn").onclick = async (event) => {
+  event.preventDefault();
   const email = document.getElementById("email").value.trim();
   if (!email) {
     setAuthMessage("Enter your email first, then we can send a reset link.", "error");
