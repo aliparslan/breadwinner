@@ -5,6 +5,7 @@ const SUPABASE_URL = "https://ahvfdteobwmrqkiorhpv.supabase.co";
 interface Env {
   DB: D1Database;
   SUPABASE_SERVICE_ROLE_KEY: string;
+  SUPABASE_SECRET_KEY?: string;
 }
 
 export const onRequestPost: PagesFunction<Env> = async ({ env, data }) => {
@@ -15,14 +16,16 @@ export const onRequestPost: PagesFunction<Env> = async ({ env, data }) => {
     await env.DB.prepare("DELETE FROM statement_logs WHERE user_id = ?").bind(userId).run();
     await env.DB.prepare("DELETE FROM profiles WHERE user_id = ?").bind(userId).run();
 
-    if (!env.SUPABASE_SERVICE_ROLE_KEY) {
+    const adminKey = env.SUPABASE_SECRET_KEY || env.SUPABASE_SERVICE_ROLE_KEY;
+
+    if (!adminKey) {
       return Response.json(
-        { error: "Missing SUPABASE_SERVICE_ROLE_KEY" },
+        { error: "Missing SUPABASE_SECRET_KEY or SUPABASE_SERVICE_ROLE_KEY" },
         { status: 500 }
       );
     }
 
-    const supabaseAdmin = createClient(SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, {
+    const supabaseAdmin = createClient(SUPABASE_URL, adminKey, {
       auth: {
         autoRefreshToken: false,
         persistSession: false,
