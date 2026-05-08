@@ -1,0 +1,16 @@
+INSERT INTO categories (name) VALUES
+  ('Dining'),
+  ('Entertainment'),
+  ('Gifts'),
+  ('Groceries'),
+  ('Health'),
+  ('Housing'),
+  ('Income'),
+  ('Miscellaneous'),
+  ('Other'),
+  ('Savings'),
+  ('Shopping'),
+  ('Subscriptions'),
+  ('Transportation'),
+  ('Travel'),
+  ('Uncategorized');
