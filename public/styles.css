@@ -128,6 +128,38 @@ input, select {
   margin-top: 1.5rem; /* Reduced space */
   display: flex; flex-direction: column; gap: 12px; /* Decreased gap */
 }
+.auth-meta {
+  margin-top: 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.text-btn {
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--primary);
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.text-btn:hover {
+  color: var(--primary-hover);
+  background: transparent;
+}
+.auth-help {
+  margin-top: 12px;
+  padding: 12px 14px;
+  background: #f9f7f5;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text-secondary);
+  font-size: 0.88rem;
+  text-align: left;
+}
 
 /* --- INPUTS --- */
 .input-label {
@@ -644,6 +676,32 @@ tr:hover .actions {
   padding: 60px 20px;
   color: var(--text-muted);
 }
+.empty-state h4 {
+  margin: 0 0 10px 0;
+  color: var(--primary);
+  font-size: 1.1rem;
+}
+.empty-state p {
+  margin: 0 auto 18px;
+  max-width: 460px;
+}
+.empty-state-actions {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+}
+.empty-state-steps {
+  margin: 0 auto;
+  max-width: 460px;
+  text-align: left;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+.empty-state-steps li + li {
+  margin-top: 6px;
+}
 .empty-icon {
   font-size: 3rem;
   margin-bottom: 10px;
@@ -850,6 +908,15 @@ tr:hover .actions {
     transform: none;
     position: relative;
     border-radius: 20px; /* Slightly less rounded on mobile */
+  }
+
+  .auth-meta {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .empty-state-actions {
+    flex-direction: column;
   }
 
   /* Reduce spacing in auth elements on mobile */

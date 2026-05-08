@@ -36,6 +36,28 @@
           <button id="login-btn" class="primary-btn">Sign In</button>
           <button id="signup-btn" class="secondary">Create Account</button>
         </div>
+        <div class="auth-meta">
+          <button id="forgot-password-btn" class="text-btn" type="button">Forgot password?</button>
+          <button id="resend-confirmation-btn" class="text-btn hidden" type="button">
+            Resend confirmation email
+          </button>
+        </div>
+        <div id="auth-help" class="auth-help hidden"></div>
+        <div id="reset-password-section" class="hidden">
+          <label class="input-label" for="reset-password">New Password</label>
+          <input type="password" id="reset-password" placeholder="Create a new password" />
+
+          <label class="input-label" for="reset-password-confirm">Confirm Password</label>
+          <input
+            type="password"
+            id="reset-password-confirm"
+            placeholder="Enter it again"
+          />
+
+          <div class="auth-buttons">
+            <button id="save-password-btn" class="primary-btn">Save New Password</button>
+          </div>
+        </div>
         <p id="msg" class="error-msg"></p>
       </div>
 <!-- About Modal -->

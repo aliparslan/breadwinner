@@ -1,5 +1,37 @@
 let allCategories = [];
 let allTransactions = [];
+let pendingConfirmationEmail = "";
+
+function setAuthMessage(message = "", type = "") {
+  const msgEl = document.getElementById("msg");
+  if (!msgEl) return;
+  msgEl.innerText = message;
+  msgEl.dataset.state = type;
+}
+
+function setAuthHelp(message = "") {
+  const helpEl = document.getElementById("auth-help");
+  if (!helpEl) return;
+  helpEl.innerText = message;
+  helpEl.classList.toggle("hidden", !message);
+}
+
+function toggleResetPasswordMode(enabled) {
+  document.getElementById("reset-password-section")?.classList.toggle("hidden", !enabled);
+  document.getElementById("email")?.classList.toggle("hidden", enabled);
+  document.querySelector('label[for="email"]')?.classList.toggle("hidden", enabled);
+  document.getElementById("password")?.classList.toggle("hidden", enabled);
+  document.querySelector('label[for="password"]')?.classList.toggle("hidden", enabled);
+  document.getElementById("login-btn")?.classList.toggle("hidden", enabled);
+  document.getElementById("signup-btn")?.classList.toggle("hidden", enabled);
+  document.getElementById("forgot-password-btn")?.classList.toggle("hidden", enabled);
+  document.getElementById("resend-confirmation-btn")?.classList.toggle("hidden", enabled || !pendingConfirmationEmail);
+  setAuthHelp(
+    enabled
+      ? "You're in password recovery mode. Choose a new password to finish signing back in."
+      : ""
+  );
+}
 
 async function getAuthToken() {
   const {
@@ -534,7 +566,17 @@ function renderDashboard(transactions, forceExpand = false) {
     container.innerHTML = `
       <div class="empty-state">
         <span class="empty-icon">📭</span>
-        <p>No transactions found.</p>
+        <h4>Your dashboard is ready</h4>
+        <p>Add your first transaction or upload a statement to start building your spending history.</p>
+        <div class="empty-state-actions">
+          <button class="primary-btn" onclick="openAddModal()">Add first transaction</button>
+          <button class="secondary" onclick="document.getElementById('trigger-upload-btn')?.click()">Upload statement</button>
+        </div>
+        <ol class="empty-state-steps">
+          <li>Start with one or two recent expenses so the dashboard has something to show.</li>
+          <li>Add income too if you want the monthly net cards to feel complete.</li>
+          <li>Come back to Insights after a few transactions for more useful patterns.</li>
+        </ol>
       </div>`;
     return;
   }
@@ -860,10 +902,11 @@ document.getElementById("password")?.addEventListener("keypress", handleLoginEnt
 document.getElementById("login-btn").onclick = async () => {
   const email = document.getElementById("email").value;
   const password = document.getElementById("password").value;
+  setAuthMessage("", "");
   toggleLoading(true);
   const { error } = await client.auth.signInWithPassword({ email, password });
   if (error) {
-    document.getElementById("msg").innerText = error.message;
+    setAuthMessage(error.message, "error");
     toggleLoading(false);
   } else {
     checkUser();
@@ -873,24 +916,104 @@ document.getElementById("login-btn").onclick = async () => {
 document.getElementById("signup-btn").onclick = async () => {
   const email = document.getElementById("email").value;
   const password = document.getElementById("password").value;
+  setAuthMessage("", "");
   toggleLoading(true);
   const { error } = await client.auth.signUp({ email, password });
   toggleLoading(false);
   if (error) {
-    document.getElementById("msg").innerText = error.message;
+    setAuthMessage(error.message, "error");
   } else {
-    alert("Check your email for the confirmation link.");
+    pendingConfirmationEmail = email;
+    document.getElementById("resend-confirmation-btn")?.classList.remove("hidden");
+    setAuthMessage("Check your email for the confirmation link.", "success");
+    setAuthHelp("No email yet? Use “Resend confirmation email” in a minute or two.");
+  }
+};
+
+document.getElementById("forgot-password-btn").onclick = async () => {
+  const email = document.getElementById("email").value.trim();
+  if (!email) {
+    setAuthMessage("Enter your email first, then we can send a reset link.", "error");
+    return;
+  }
+
+  toggleLoading(true);
+  const { error } = await client.auth.resetPasswordForEmail(email, {
+    redirectTo: `${window.location.origin}/?reset=1`,
+  });
+  toggleLoading(false);
+
+  if (error) {
+    setAuthMessage(error.message, "error");
+  } else {
+    setAuthMessage("Password reset email sent.", "success");
+    setAuthHelp("Open the email on this device, then come back here to set a new password.");
+  }
+};
+
+document.getElementById("resend-confirmation-btn").onclick = async () => {
+  if (!pendingConfirmationEmail) return;
+  toggleLoading(true);
+  const { error } = await client.auth.resend({
+    type: "signup",
+    email: pendingConfirmationEmail,
+  });
+  toggleLoading(false);
+
+  if (error) {
+    setAuthMessage(error.message, "error");
+  } else {
+    setAuthMessage("Confirmation email resent.", "success");
+  }
+};
+
+document.getElementById("save-password-btn").onclick = async () => {
+  const password = document.getElementById("reset-password").value;
+  const confirm = document.getElementById("reset-password-confirm").value;
+
+  if (!password || password.length < 8) {
+    setAuthMessage("Use at least 8 characters for your new password.", "error");
+    return;
+  }
+  if (password !== confirm) {
+    setAuthMessage("Passwords do not match.", "error");
+    return;
+  }
+
+  toggleLoading(true);
+  const { error } = await client.auth.updateUser({ password });
+  toggleLoading(false);
+
+  if (error) {
+    setAuthMessage(error.message, "error");
+  } else {
+    setAuthMessage("Password updated. You can keep going.", "success");
+    setAuthHelp("");
+    window.history.replaceState({}, document.title, window.location.pathname);
+    toggleResetPasswordMode(false);
+    checkUser();
   }
 };
 
 async function checkUser() {
   toggleLoading(true);
   try {
+    const urlParams = new URLSearchParams(window.location.search);
     const {
       data: { session },
     } = await client.auth.getSession();
+    const isRecoveryMode = urlParams.has("reset");
+
+    if (isRecoveryMode && session) {
+      document.getElementById("auth-section").classList.remove("hidden");
+      document.getElementById("app-section").classList.add("hidden");
+      toggleResetPasswordMode(true);
+      setAuthMessage("", "");
+      return;
+    }
+
     updateUI(session);
-    if (session) {
+    if (session && !isRecoveryMode) {
       await fetchTransactions();
       fetchInsights();
     }
@@ -904,6 +1027,8 @@ async function checkUser() {
 
 function updateUI(session) {
   if (session) {
+    toggleResetPasswordMode(false);
+    setAuthHelp("");
     document.getElementById("auth-section").classList.add("hidden");
     document.getElementById("app-section").classList.remove("hidden");
     document.getElementById("user-email").innerText = session.user.email;
@@ -915,6 +1040,7 @@ function updateUI(session) {
     }
     document.getElementById("auth-section").classList.remove("hidden");
     document.getElementById("app-section").classList.add("hidden");
+    toggleResetPasswordMode(false);
   }
 }
 
