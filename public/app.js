@@ -635,7 +635,7 @@ function renderRow(tx) {
   const pillStyle = getCategoryPillStyle(tx.categoryName);
   const categoryColor = getCategoryColor(tx.categoryName);
   return `
-    <tr onclick="openEdit(${tx.id})" style="cursor: pointer; --category-color: ${categoryColor};" tabindex="0" role="button" aria-label="Edit ${desc}">
+    <tr class="transaction-row" data-tx-id="${tx.id}" style="cursor: pointer; --category-color: ${categoryColor};" tabindex="0" role="button" aria-label="Edit ${desc}" aria-keyshortcuts="Enter Space">
       <td>${formatDate(tx.date)}</td>
       <td>${desc}</td>
       <td><span class="category-badge" style="${pillStyle}">${tx.categoryName}</span></td>
@@ -1054,6 +1054,12 @@ function toggleUserDropdown() {
 }
 
 document.addEventListener("click", (e) => {
+  const txRow = e.target.closest(".transaction-row");
+  if (txRow) {
+    openEdit(txRow.dataset.txId);
+    return;
+  }
+
   const dropdown = document.querySelector(".user-dropdown");
   const menu = document.getElementById("user-dropdown-menu");
   if (dropdown && menu && !dropdown.contains(e.target)) {
@@ -1069,6 +1075,13 @@ document.getElementById("logout-btn").onclick = async () => {
 };
 
 document.addEventListener("keydown", (e) => {
+  const txRow = e.target.closest(".transaction-row");
+  if (txRow && (e.key === "Enter" || e.key === " ")) {
+    e.preventDefault();
+    openEdit(txRow.dataset.txId);
+    return;
+  }
+
   if (e.key === "Escape") {
     closeModal();
     closeConfirm();
